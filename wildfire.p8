@@ -159,7 +159,6 @@ function thunderstrike()
 end
 
 function update_world()
-	tick+=1
 	update_player()
 
 	world_x=mid(0,play_x-28,448)
@@ -259,6 +258,7 @@ function _init()
 end
 
 function _update()
+	tick+=1
 	if game_state.update then
 		game_state.update()
 	end
