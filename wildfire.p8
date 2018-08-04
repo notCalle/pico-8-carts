@@ -6,10 +6,7 @@ __lua__
 
 tick=0
 thunder_tick=tick
-play_x=256
-play_y=256
 max_ht=100.0
-play_ht=max_ht
 game_state={}
 
 -- sprite flag definitions
@@ -81,44 +78,61 @@ gameover_state={
 -- running game
 --
 
-function collide_player()
-	local flags=0
-	for d_x=0,7,7 do
-		local map_x=64+(play_x+d_x)/8
-		for d_y=0,7,7 do
-			local map_y=(play_y+d_y)/8
-			local spr=mget(map_x,map_y)
-			flags=bor(fget(spr),flags)
-		end
-	end
-	if fl_tst(fl_m.fire,flags) then
-		play_ht-=1
-	end
-	if fl_tst(fl_m.water,flags) then
-		play_ht=min(play_ht*1.01,max_ht)
-	end
-	if fl_tst(fl_m.block,flags) then
-		play_x-=mov_x
-		play_y-=mov_y
-	end
-end
+play={
+	x=256,
+	y=256,
+	dx=0,
+	dy=0,
+	hd_x=1,
+	hd_y=0,
+	ht=max_ht
+	}
 
-function update_player()
-	mov_x=0
-	mov_y=0
+function move_player()
+	local mov_x=0
+	local mov_y=0
 
 	if(btn(0)) mov_x-=1
 	if(btn(1)) mov_x+=1
 	if(btn(2)) mov_y-=1
 	if(btn(3)) mov_y+=1
-	play_x=mid(0,play_x+mov_x,504)
-	play_y=mid(0,play_y+mov_y,504)
 	if mov_x~=0 or mov_y~=0 then
-		play_hdng=mov_x+3*mov_y
-		play_spr=33+mov_x+16*mov_y
+		play.hd_x=mov_x
+		play.hd_y=mov_y
 	end
+	play.dx=mov_x
+	play.dy=mov_y
+	play.x=mid(0,play.x+mov_x,504)
+	play.y=mid(0,play.y+mov_y,504)
+end
+
+function collide_player()
+	local flags=0
+	for d_x=0,7,7 do
+		local map_x=64+(play.x+d_x)/8
+		for d_y=0,7,7 do
+			local map_y=(play.y+d_y)/8
+			local spr=mget(map_x,map_y)
+			flags=bor(fget(spr),flags)
+		end
+	end
+	if fl_tst(fl_m.fire,flags) then
+		play.ht-=1
+	end
+	if fl_tst(fl_m.water,flags) then
+		play.ht=min(play.ht*1.01,max_ht)
+	end
+	if fl_tst(fl_m.block,flags) then
+		play.x-=play.dx
+		play.y-=play.dy
+	end
+end
+
+function update_player()
+	move_player()
 	collide_player()
-	if play_ht<=0 then
+
+	if play.ht<=0 then
 		next_state=gameover_state
 	end
 end
@@ -188,8 +202,8 @@ end
 function update_world()
 	update_player()
 
-	world_x=mid(0,play_x-28,448)
-	world_y=mid(0,play_y-20,464)
+	world_x=mid(0,play.x-28,448)
+	world_y=mid(0,play.y-20,464)
 
 	update_thunder(0.01)
 	for x=0,63 do
@@ -217,14 +231,16 @@ function draw_minimap()
 	rectfill(0,0,16,16,0)
 	spr(110,0,0,2,2)
 	if tick%2 == 1 then
-		pset(play_x/32,play_y/32,15)
+		pset(play.x/32,play.y/32,15)
 	end
 end
 
 function draw_player()
+	local pspr=33+play.hd_x+16*play.hd_y
+
 	clip(0,0,64,48)
 	camera(world_x,world_y)
-	spr(play_spr,play_x,play_y)
+	spr(pspr,play.x,play.y)
 end
 
 function draw_ui()
@@ -232,7 +248,7 @@ function draw_ui()
 	clip(0,48,48,16)
 	rectfill(0,0,64,16,9)
 
-	ht_px=flr(46*play_ht/max_ht)
+	ht_px=flr(46*play.ht/max_ht)
 	rectfill(1,1,46,5,11)
 	if ht_px<46 then
 		rectfill(ht_px,1,46,5,8)
