@@ -2,7 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
 -- wildfire
--- by notcalle   #lowrezjam 2018
+-- by notcalle  #lowrezjam 2018
 
 tick=0
 thunder_tick=tick
@@ -64,54 +64,54 @@ function collide_player()
 			local map_y=(play_y+d_y)/8
 			local spr=mget(map_x,map_y)
 			flags=bor(fget(spr),flags)
-  end
- end
- if band(flags,0x01)~=0 then
- 	play_ht-=1
- end
- if band(flags,0x02)~=0 then
- 	play_x-=mov_x
- 	play_y-=mov_y
- end
+		end
+	end
+	if band(flags,0x01)~=0 then
+		play_ht-=1
+	end
+	if band(flags,0x02)~=0 then
+		play_x-=mov_x
+		play_y-=mov_y
+	end
 end
 
 function update_player()
- mov_x=0
- mov_y=0
- play_ht=min(play_ht*1.003,max_ht)
- 
-	if(btn(0))	mov_x-=1
+	mov_x=0
+	mov_y=0
+	play_ht=min(play_ht*1.003,max_ht)
+
+	if(btn(0)) mov_x-=1
 	if(btn(1)) mov_x+=1
 	if(btn(2)) mov_y-=1
 	if(btn(3)) mov_y+=1
- play_x=mid(0,play_x+mov_x,504)
- play_y=mid(0,play_y+mov_y,504)
- if mov_x~=0 or mov_y~=0 then
-  play_hdng=mov_x+3*mov_y
-	 play_spr=33+mov_x+16*mov_y
+	play_x=mid(0,play_x+mov_x,504)
+	play_y=mid(0,play_y+mov_y,504)
+	if mov_x~=0 or mov_y~=0 then
+		play_hdng=mov_x+3*mov_y
+		play_spr=33+mov_x+16*mov_y
 	end
- collide_player()
- if play_ht<=0 then
- 	next_state=gameover_state
- end
+	collide_player()
+	if play_ht<=0 then
+		next_state=gameover_state
+	end
 end
 
 function set_fire(x,y,always)
-		local mm_x=112+x/4
-		local mm_y=48+y/4
+	local mm_x=112+x/4
+	local mm_y=48+y/4
 
-		if(fget(mget(x+64,y),4)) return
+	if(fget(mget(x+64,y),4)) return
 
-		if mget(x,y)==1 and not always then
-			mset(x,y,2)
-			if sget(mm_x,mm_y)~=8 then
-				sset(mm_x,mm_y,4)
-			end
-		else
-			sset(mm_x,mm_y,8)
-			mset(x,y,3)
-			mset(x+64,y,15)
+	if mget(x,y)==1 and not always then
+		mset(x,y,2)
+		if sget(mm_x,mm_y)~=8 then
+			sset(mm_x,mm_y,4)
 		end
+	else
+		sset(mm_x,mm_y,8)
+		mset(x,y,3)
+		mset(x+64,y,15)
+	end
 end
 
 function on_fire(x,y)
@@ -147,10 +147,10 @@ function update_thunder(prob)
 		local thun_x=flr(rnd(64))
 		local thun_y=flr(rnd(64))
 
-	 set_fire(thun_x,thun_y,true)
-	 
+		set_fire(thun_x,thun_y,true)
+
 		thunder_tick=tick+flr(4+rnd(4))
-		sfx(0)		
+		sfx(0)
 	end
 end
 
@@ -165,11 +165,11 @@ function update_world()
 	world_x=mid(0,play_x-28,448)
 	world_y=mid(0,play_y-20,464)
 
- update_thunder(0.01)
+	update_thunder(0.01)
 	for x=0,63 do
 		update_fire(x,tick%64)
 	end
-	
+
 	animate_fire()
 end
 
@@ -187,10 +187,10 @@ end
 
 function draw_minimap()
 	clip(48,48,16,16)
- camera(-48,-48)
- rectfill(0,0,16,16,0)
+	camera(-48,-48)
+	rectfill(0,0,16,16,0)
 	spr(110,0,0,2,2)
- if tick%2 == 1 then
+	if tick%2 == 1 then
 		pset(play_x/32,play_y/32,15)
 	end
 end
@@ -204,11 +204,11 @@ end
 function draw_ui()
 	camera(0,-48)
 	clip(0,48,48,16)
- rectfill(0,0,64,16,9)
+	rectfill(0,0,64,16,9)
 
 	ht_px=flr(46*play_ht/max_ht)
- rectfill(1,1,46,5,11)
- if ht_px<46 then
+	rectfill(1,1,46,5,11)
+	if ht_px<46 then
 		rectfill(ht_px,1,46,5,8)
 	end
 	print("health",12,1,0)
@@ -219,7 +219,7 @@ function draw_world()
 	if not thunderstrike() then
 		draw_map()
 	end
-	
+
 	draw_player()
 
 	draw_minimap()
@@ -243,7 +243,7 @@ function init_world()
 			mset(127-n,63-c,14)
 		end
 		for c=0,rnd(4) do
-		 mset(127-c,63-n,14)
+			mset(127-c,63-n,14)
 		end
 	end
 end
@@ -259,8 +259,8 @@ function _init()
 end
 
 function _update()
- if game_state.update then
-	 game_state.update()
+	if game_state.update then
+		game_state.update()
 	end
 end
 
@@ -268,9 +268,9 @@ function _draw()
 	if game_state.draw then
 		camera()
 		clip()
-	 game_state.draw()
+		game_state.draw()
 	end
- game_state=next_state
+	game_state=next_state
 end
 
 __gfx__
