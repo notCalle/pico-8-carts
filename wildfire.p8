@@ -12,6 +12,22 @@ max_ht=100.0
 play_ht=max_ht
 game_state={}
 
+-- sprite flag definitions
+fl_b={
+	fire=0,
+	block=1,
+	water=4
+	}
+fl_m={
+	fire=0x01,
+	block=0x02,
+	water=0x10
+	}
+
+function fl_tst(mask,flags)
+	return band(mask,flags)~=0
+end
+
 --
 -- game menu screen
 --
