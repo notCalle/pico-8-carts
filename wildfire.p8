@@ -95,6 +95,9 @@ function collide_player()
 	if fl_tst(fl_m.fire,flags) then
 		play_ht-=1
 	end
+	if fl_tst(fl_m.water,flags) then
+		play_ht=min(play_ht*1.01,max_ht)
+	end
 	if fl_tst(fl_m.block,flags) then
 		play_x-=mov_x
 		play_y-=mov_y
@@ -104,7 +107,6 @@ end
 function update_player()
 	mov_x=0
 	mov_y=0
-	play_ht=min(play_ht*1.003,max_ht)
 
 	if(btn(0)) mov_x-=1
 	if(btn(1)) mov_x+=1
