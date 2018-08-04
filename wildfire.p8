@@ -259,18 +259,42 @@ world_state={
 	}
 
 function init_world()
+	local r1,r2,rt
 	for n=0,63 do
-		for c=0,rnd(4) do
-			mset(64+n,c,14)
+	 r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
+		for c=0,r2 do
+			if c<r1 then
+				mset(64+n,c,13)
+			else
+				mset(64+n,c,14)
+			end
 		end
-		for c=0,rnd(4) do
-			mset(64+c,n,14)
+
+	 r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
+		for c=0,r2 do
+			if c<r1 then
+				mset(64+c,n,13)
+			else
+				mset(64+c,n,14)
+			end
 		end
-		for c=0,rnd(4) do
-			mset(127-n,63-c,14)
+
+	 r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
+		for c=0,r2 do
+			if c<r1 then
+				mset(127-n,63-c,13)
+			else
+				mset(127-n,63-c,14)
+			end
 		end
-		for c=0,rnd(4) do
-			mset(127-c,63-n,14)
+
+	 r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
+		for c=0,r2 do
+			if c<r1 then
+				mset(127-c,63-n,13)
+			else
+				mset(127-c,63-n,14)
+			end
 		end
 	end
 end
