@@ -39,6 +39,7 @@ function update_menu()
 end
 
 function draw_menu()
+	if(tick%2~=0) return
 	cls(9)
 	rectfill(0,28,64,36,8)
 	print("∧ wildfire ∧",4+rnd(3),29+rnd(3),10)
@@ -47,10 +48,8 @@ function draw_menu()
 	print("∧ wildfire ∧",4+rnd(3),29+rnd(3),9)
 	print("∧ wildfire ∧",5,30,8)
 
-	if band(tick,0x8)~=0 then
-		print("❎/🅾️",22,52,8)
-		print("to start",16,58,8)
-	end
+	print("❎/🅾️",22,52,8)
+	print("to start",16,58,8)
 end
 
 menu_state={
