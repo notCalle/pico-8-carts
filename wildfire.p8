@@ -92,10 +92,10 @@ function collide_player()
 			flags=bor(fget(spr),flags)
 		end
 	end
-	if band(flags,0x01)~=0 then
+	if fl_tst(fl_m.fire,flags) then
 		play_ht-=1
 	end
-	if band(flags,0x02)~=0 then
+	if fl_tst(fl_m.block,flags) then
 		play_x-=mov_x
 		play_y-=mov_y
 	end
@@ -126,7 +126,7 @@ function set_fire(x,y,always)
 	local mm_x=112+x/4
 	local mm_y=48+y/4
 
-	if(fget(mget(x+64,y),4)) return
+	if(fget(mget(x+64,y),fl_b.water)) return
 
 	if mget(x,y)==1 and not always then
 		mset(x,y,2)
@@ -144,7 +144,7 @@ function on_fire(x,y)
 	if x<0 or y<0 or x>63 or y>64 then
 		return false
 	end
-	return fget(mget(x+64,y),0)
+	return fget(mget(x+64,y),fl_b.fire)
 end
 
 function update_fire(x,y)
