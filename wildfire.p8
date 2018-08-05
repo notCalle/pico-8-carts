@@ -96,7 +96,7 @@ function draw_banner()
 	if(banner.tick<=tick) return
 
 	local str=banner.str
-	
+
 	clip(0,39,64,46)
 	camera(banner.x,-40)
 	print(str,rnd(3),rnd(3),10)
@@ -223,17 +223,17 @@ end
 function set_fire(x,y,always)
 	local mm_x=112+x/4
 	local mm_y=48+y/4
- local m_spr=mget(x,y)
+	local m_spr=mget(x,y)
 	if(fget(iget(x,y),fl_b.water)) return
 	if fget(iget(x,y),fl_b.grow) then
 		iset(x,y,0)
 		return
-	end 
+	end
 	if fget(m_spr,fl_b.fire) or always then
 		sset(mm_x,mm_y,8)
 		iset(x,y,15)
 	end
- if(fget(m_spr,fl_b.block)) return
+	if(fget(m_spr,fl_b.block)) return
 	mset(x,y,mget(x,y)+1)
 end
 
@@ -250,7 +250,7 @@ function update_fire(x,y)
 	local prob=0
 	for d_x=-1,1 do
 		for d_y=-1,1 do
-		 local ispr=iget(x+d_x,y+d_y)
+			local ispr=iget(x+d_x,y+d_y)
 			if fget(ispr,fl_b.fire) then
 				prob+=0.1
 			elseif fget(ispr,fl_b.water) then
