@@ -217,19 +217,18 @@ end
 function set_fire(x,y,always)
 	local mm_x=112+x/4
 	local mm_y=48+y/4
-
-	if(fget(mget(x+64,y),fl_b.water)) return
-
-	if mget(x,y)==1 and not always then
-		mset(x,y,2)
-		if sget(mm_x,mm_y)~=8 then
-			sset(mm_x,mm_y,4)
-		end
-	else
+ local m_spr=mget(x,y)
+	if(fget(iget(x,y),fl_b.water)) return
+	if fget(iget(x,y),fl_b.grow) then
+		iset(x,y,0)
+		return
+	end 
+	if fget(m_spr,fl_b.fire) or always then
 		sset(mm_x,mm_y,8)
-		mset(x,y,3)
 		iset(x,y,15)
 	end
+ if(fget(m_spr,fl_b.block)) return
+	mset(x,y,mget(x,y)+1)
 end
 
 function on_fire(x,y)
@@ -240,11 +239,16 @@ function on_fire(x,y)
 end
 
 function update_fire(x,y)
+	if(on_fire(x,y)) return
+
 	local prob=0
 	for d_x=-1,1 do
 		for d_y=-1,1 do
-			if on_fire(x+d_x,y+d_y) then
+		 local ispr=iget(x+d_x,y+d_y)
+			if fget(ispr,fl_b.fire) then
 				prob+=0.1
+			elseif fget(ispr,fl_b.water) then
+				prob-=0.05
 			end
 		end
 	end
