@@ -6,6 +6,7 @@ __lua__
 
 tick=0
 thunder_tick=tick
+banner_tick=tick
 max_ht=100.0
 game_state={}
 
@@ -77,6 +78,33 @@ gameover_state={
 --
 -- running game
 --
+
+banner={
+	tick=0,
+	str=nil,
+	}
+
+function draw_banner()
+	if(banner.tick<=tick) return
+
+	local str=banner.str
+	
+	clip(0,39,64,46)
+	camera(banner.x,-40)
+	print(str,rnd(3),rnd(3),10)
+	print(str,rnd(3),rnd(3),9)
+	print(str,rnd(3),rnd(3),10)
+	print(str,rnd(3),rnd(3),9)
+	print(str,1,1,0)
+	banner.x+=1
+end
+
+function set_banner(str)
+	local ticks=64+4*#str
+	banner.x=-64
+	banner.str=str
+	banner.tick=tick+ticks
+end
 
 play={
 	x=256,
@@ -279,9 +307,9 @@ function draw_world()
 	end
 
 	draw_player()
-
 	draw_minimap()
 	draw_ui()
+	draw_banner()
 end
 
 world_state={
