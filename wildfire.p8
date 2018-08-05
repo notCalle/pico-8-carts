@@ -106,6 +106,33 @@ function set_banner(str)
 	banner.tick=tick+ticks
 end
 
+-- items
+
+item={
+	bucket=64,
+	bucket_full=65
+	}
+
+function iset(x,y,item)
+	mset(64+x,y,item)
+end
+
+function iget(x,y)
+	return mget(64+x,y)
+end
+
+function take_item(x,y)
+	local ispr=iget(x,y)
+	if ispr==item.bucket or ispr==item.bucket_full then
+		play.n_bkt+=1
+		if(ispr==item.bucket_full) play.bkt+=1
+		set_banner("bucket taken",0)
+	end
+	iset(x,y,0)
+end
+
+-- player data
+
 play={
 	x=256,
 	y=256,
@@ -193,7 +220,7 @@ function set_fire(x,y,always)
 	else
 		sset(mm_x,mm_y,8)
 		mset(x,y,3)
-		mset(x+64,y,15)
+		iset(x,y,15)
 	end
 end
 
@@ -201,7 +228,7 @@ function on_fire(x,y)
 	if x<0 or y<0 or x>63 or y>64 then
 		return false
 	end
-	return fget(mget(x+64,y),fl_b.fire)
+	return fget(iget(x,y),fl_b.fire)
 end
 
 function update_fire(x,y)
@@ -323,36 +350,36 @@ function init_world()
 		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
 		for c=0,r2 do
 			if c<r1 then
-				mset(64+n,c,13)
+				iset(n,c,13)
 			else
-				mset(64+n,c,14)
+				iset(n,c,14)
 			end
 		end
 
 		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
 		for c=0,r2 do
 			if c<r1 then
-				mset(64+c,n,13)
+				iset(c,n,13)
 			else
-				mset(64+c,n,14)
+				iset(c,n,14)
 			end
 		end
 
 		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
 		for c=0,r2 do
 			if c<r1 then
-				mset(127-n,63-c,13)
+				iset(63-n,63-c,13)
 			else
-				mset(127-n,63-c,14)
+				iset(63-n,63-c,14)
 			end
 		end
 
 		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
 		for c=0,r2 do
 			if c<r1 then
-				mset(127-c,63-n,13)
+				iset(63-c,63-n,13)
 			else
-				mset(127-c,63-n,14)
+				iset(63-c,63-n,14)
 			end
 		end
 	end
