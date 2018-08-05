@@ -66,7 +66,11 @@ function update_gameover()
 end
 
 function draw_gameover()
-	cls(9+flr(rnd(2)))
+	rectfill(0,28,64,36,8)
+	print("∧ game over ∧",1+rnd(3),29+rnd(3),10)
+	print("∧ game over ∧",1+rnd(3),29+rnd(3),9)
+	print("∧ game over ∧",1+rnd(3),29+rnd(3),10)
+	print("∧ game over ∧",1+rnd(3),29+rnd(3),9)
 	print("∧ game over ∧",2,30,8)
 end
 
