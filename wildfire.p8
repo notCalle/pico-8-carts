@@ -15,14 +15,14 @@ fl_b={
 	fire=0,
 	block=1,
 	item=2,
-	grow=3,
+	wet=3,
 	water=4
 	}
 fl_m={
 	fire=0x01,
 	block=0x02,
 	item=0x04,
-	grow=0x08,
+	wet=0x08,
 	water=0x10
 	}
 
@@ -172,42 +172,54 @@ function move_player()
 end
 
 function collide_player()
-	local flags=0
+	local mflags=0
+	local iflags=0
 	for d_x=0,7,7 do
 		local map_x=(play.x+d_x)/8
 		for d_y=0,7,7 do
 			local map_y=(play.y+d_y)/8
-			local	flags=fget(iget(map_x,map_y))
-			if fl_tst(fl_m.fire,flags) then
+			local	iflag=fget(iget(map_x,map_y))
+			local	mflag=fget(mget(map_x,map_y))
+			iflags=bor(iflags,iflag)
+			mflags=bor(mflags,mflag)
+
+			if fl_tst(fl_m.fire,iflag) then
 				play.ht-=1
 			else
 				play.ht=min(play.ht*1.0001,max_ht)
 			end
-			if fl_tst(fl_m.water,flags) then
-				if(play.bkt) play.bkt=1
-			end
-			if fl_tst(fl_m.block,flags) then
-				play.x-=play.dx
-				play.y-=play.dy
-			end
-			if fl_tst(fl_m.item,flags) then
+
+			if fl_tst(fl_m.item,iflag) then
 				take_item(map_x,map_y)
 			end
 		end
+	end
+
+	local aflags=bor(mflags,iflags)
+	
+	if fl_tst(fl_m.water,mflags) then
+		play.bkt=min(play.n_bkt,play.bkt+1)
+	end
+
+	if fl_tst(fl_m.block,aflags) then
+		play.x-=play.dx
+		play.y-=play.dy
 	end
 end
 
 function use_bucket()
 	if(play.bkt<1) return
 
-	for x=0,1 do
-		local mx=(play.x+7*x)/8+play.hd_x
-		for y=0,1 do
-			local my=(play.y+7*y)/8+play.hd_y
-			iset(mx,my,12)
+	for x=-1,1 do
+		local mx=(play.x+4*x)/8+play.hd_x
+		for y=-1,1 do
+			local my=(play.y+4*y)/8+play.hd_y
+			if iget(mx,my)==0 or fget(iget(mx,my),fl_b.fire) then
+				iset(mx,my,12)
+			end
 		end
 	end
-	play.ht=min(play.ht*1.25,max_ht)
+	play.ht=min(play.ht*1.1,max_ht)
 	play.bkt-=1
 end
 
@@ -225,7 +237,7 @@ function set_fire(x,y,always)
 	local mm_y=48+y/4
 	local m_spr=mget(x,y)
 	if(fget(iget(x,y),fl_b.water)) return
-	if fget(iget(x,y),fl_b.grow) then
+	if fget(iget(x,y),fl_b.wet) then
 		iset(x,y,0)
 		return
 	end
@@ -253,7 +265,7 @@ function update_fire(x,y)
 			local ispr=iget(x+d_x,y+d_y)
 			if fget(ispr,fl_b.fire) then
 				prob+=0.1
-			elseif fget(ispr,fl_b.water) then
+			elseif fget(ispr,fl_b.wet) then
 				prob-=0.05
 			end
 		end
@@ -344,10 +356,10 @@ function draw_ui()
 
 	if play.n_bkt>0 then
 		for n=1,play.bkt do
-			spr(item.bucket_full,n*4-3,7)
+			spr(item.bucket_full,n*7-6,7)
 		end
 		for n=play.bkt+1,play.n_bkt do
-			spr(item.bucket,n*4-3,7)
+			spr(item.bucket,n*7-6,7)
 		end
 	end
 
@@ -388,39 +400,49 @@ function init_world()
 		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
 		for c=0,r2 do
 			if c<r1 then
-				iset(n,c,13)
+				mset(n,c,13)
 			else
-				iset(n,c,14)
+				mset(n,c,14)
 			end
 		end
 
 		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
 		for c=0,r2 do
 			if c<r1 then
-				iset(c,n,13)
+				mset(c,n,13)
 			else
-				iset(c,n,14)
+				mset(c,n,14)
 			end
 		end
 
 		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
 		for c=0,r2 do
 			if c<r1 then
-				iset(63-n,63-c,13)
+				mset(63-n,63-c,13)
 			else
-				iset(63-n,63-c,14)
+				mset(63-n,63-c,14)
 			end
 		end
 
 		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
 		for c=0,r2 do
 			if c<r1 then
-				iset(63-c,63-n,13)
+				mset(63-c,63-n,13)
 			else
-				iset(63-c,63-n,14)
+				mset(63-c,63-n,14)
 			end
 		end
 	end
+
+	for n=1,5 do
+		iset(8+rnd(48),8+rnd(48),item.bucket)
+	end
+	iset(33,33,item.bucket)
+
+	set_fire(31,31,true)
+	set_fire(31,30,true)
+	set_fire(30,31,true)
+	set_fire(30,30,true)
 end
 
 --
@@ -708,7 +730,7 @@ aa88aaaaaa888888aa88aaaaaa888888aa88aaaaaa888888aa88aaaaaa888888cccccccccccccccc
 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999988888888888888888888888888888800
 
 __gff__
-0000010300000000000000000812120100000000000000000000000000000000000000000000000000000000000002020000000000000000000000000000020204040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000001030000000000000000081a1a0100000000000000000000000000000000000000000000000000000000000002020000000000000000000000000000020204040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
