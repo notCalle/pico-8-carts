@@ -149,7 +149,8 @@ play={
 	hd_x=1,
 	hd_y=0,
 	ht=max_ht,
-	bkt=0
+	bkt=0,
+	n_bkt=0
 	}
 
 function move_player()
@@ -173,35 +174,40 @@ end
 function collide_player()
 	local flags=0
 	for d_x=0,7,7 do
-		local map_x=64+(play.x+d_x)/8
+		local map_x=(play.x+d_x)/8
 		for d_y=0,7,7 do
 			local map_y=(play.y+d_y)/8
-			local spr=mget(map_x,map_y)
-			flags=bor(fget(spr),flags)
+			local	flags=fget(iget(map_x,map_y))
+			if fl_tst(fl_m.fire,flags) then
+				play.ht-=1
+			else
+				play.ht=min(play.ht*1.0001,max_ht)
+			end
+			if fl_tst(fl_m.water,flags) then
+				if(play.bkt) play.bkt=1
+			end
+			if fl_tst(fl_m.block,flags) then
+				play.x-=play.dx
+				play.y-=play.dy
+			end
+			if fl_tst(fl_m.item,flags) then
+				take_item(map_x,map_y)
+			end
 		end
-	end
-	if fl_tst(fl_m.fire,flags) then
-		play.ht-=1
-	end
-	if fl_tst(fl_m.water,flags) then
-		play.ht=min(play.ht*1.01,max_ht)
-		if(play.bkt) play.bkt=1
-	end
-	if fl_tst(fl_m.block,flags) then
-		play.x-=play.dx
-		play.y-=play.dy
 	end
 end
 
 function use_bucket()
-	local map_x=play.x/8+play.hd_x
-	local map_y=play.y/8+play.hd_y
+	if(play.bkt<1) return
 
-	if(not play.bkt or play.bkt<1) return
-
-	if fget(mget(64+map_x,map_y),fl_b.fire) then
-		mset(64+map_x,map_y,0)
+	for x=0,1 do
+		local mx=(play.x+7*x)/8+play.hd_x
+		for y=0,1 do
+			local my=(play.y+7*y)/8+play.hd_y
+			iset(mx,my,12)
+		end
 	end
+	play.ht=min(play.ht*1.25,max_ht)
 	play.bkt-=1
 end
 
@@ -336,7 +342,14 @@ function draw_ui()
 	end
 	print("health",12,1,0)
 
-	if(play.bkt) spr(64+play.bkt,1,7)
+	if play.n_bkt>0 then
+		for n=1,play.bkt do
+			spr(item.bucket_full,n*4-3,7)
+		end
+		for n=play.bkt+1,play.n_bkt do
+			spr(item.bucket,n*4-3,7)
+		end
+	end
 end
 
 function draw_world()
