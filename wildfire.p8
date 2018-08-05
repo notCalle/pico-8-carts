@@ -350,6 +350,19 @@ function draw_ui()
 			spr(item.bucket,n*4-3,7)
 		end
 	end
+
+	clip()
+	camera()
+	local ts=flr(tick/30)
+	local tm=flr(ts/60)
+	local tstr
+	ts=ts%60
+	if ts<10 then
+		tstr=tm..":0"..ts
+	else
+		tstr=tm..":"..ts
+	end
+	print(tstr,64-4*#tstr,1,8)
 end
 
 function draw_world()
