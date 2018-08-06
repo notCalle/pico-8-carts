@@ -6,9 +6,10 @@ __lua__
 
 tick=0
 thunder_tick=tick
-banner_tick=tick
+rescue_tick=tick
 max_ht=100.0
 game_state={}
+game_time=0
 
 -- sprite flag definitions
 fl_b={
@@ -16,14 +17,18 @@ fl_b={
 	block=1,
 	item=2,
 	wet=3,
-	water=4
+	water=4,
+	rescue=6,
+	last=7
 	}
 fl_m={
 	fire=0x01,
 	block=0x02,
 	item=0x04,
 	wet=0x08,
-	water=0x10
+	water=0x10,
+	rescue=0x40,
+	last=0x80
 	}
 
 function fl_tst(mask,flags)
@@ -76,6 +81,7 @@ function draw_gameover()
 	print("∧ game over ∧",1+rnd(3),29+rnd(3),10)
 	print("∧ game over ∧",1+rnd(3),29+rnd(3),9)
 	print("∧ game over ∧",2,30,8)
+	draw_timer(game_time,64,0)
 end
 
 gameover_state={
@@ -83,6 +89,20 @@ gameover_state={
 	update=update_gameover
 	}
 
+function draw_rescue()
+	rectfill(0,28,64,36,8)
+	print("∧ rescued ∧",9+rnd(3),29+rnd(3),10)
+	print("∧ rescued ∧",9+rnd(3),29+rnd(3),9)
+	print("∧ rescued ∧",9+rnd(3),29+rnd(3),10)
+	print("∧ rescued ∧",9+rnd(3),29+rnd(3),9)
+	print("∧ rescued ∧",10,30,8)
+	draw_timer(game_time,64,0)
+end
+
+rescue_state={
+	draw=draw_rescue,
+	update=update_gameover
+	}
 --
 -- running game
 --
@@ -108,10 +128,9 @@ function draw_banner()
 end
 
 function set_banner(str)
-	local ticks=64+4*#str
 	banner.x=-64
 	banner.str=str
-	banner.tick=tick+ticks
+	banner.tick=tick+64+4*#str
 end
 
 -- items
@@ -174,6 +193,7 @@ end
 function collide_player()
 	local mflags=0
 	local iflags=0
+	
 	for d_x=0,7,7 do
 		local map_x=(play.x+d_x)/8
 		for d_y=0,7,7 do
@@ -192,6 +212,10 @@ function collide_player()
 			if fl_tst(fl_m.item,iflag) then
 				take_item(map_x,map_y)
 			end
+
+			if fl_tst(fl_m.rescue,mflag) and rescue then
+				next_state=rescue_state
+			end
 		end
 	end
 
@@ -199,6 +223,7 @@ function collide_player()
 	
 	if fl_tst(fl_m.water,mflags) then
 		play.bkt=min(play.n_bkt,play.bkt+1)
+		play.ht=min(play.ht*1.01,max_ht)
 	end
 
 	if fl_tst(fl_m.block,aflags) then
@@ -214,12 +239,14 @@ function use_bucket()
 		local mx=(play.x+4*x)/8+play.hd_x
 		for y=-1,1 do
 			local my=(play.y+4*y)/8+play.hd_y
-			if iget(mx,my)==0 or fget(iget(mx,my),fl_b.fire) then
+			if iget(mx,my)==0 then
 				iset(mx,my,12)
+			end
+			if fget(iget(mx,my),fl_b.fire) then
+				clr_fire(mx,my,12)
 			end
 		end
 	end
-	play.ht=min(play.ht*1.1,max_ht)
 	play.bkt-=1
 end
 
@@ -232,11 +259,21 @@ function update_player()
 	end
 end
 
+function clr_fire(x,y,sp)
+	local mm_x=112+x/4
+	local mm_y=48+y/4
+	sset(mm_x,mm_y,0)
+	iset(x,y,sp)
+	if rnd(1)<0.1 then
+		mset(x,y,4)
+	end
+end
+
 function set_fire(x,y,always)
 	local mm_x=112+x/4
 	local mm_y=48+y/4
 	local m_spr=mget(x,y)
-	if(fget(iget(x,y),fl_b.water)) return
+	if(fget(m_spr,fl_b.water)) return
 	if fget(iget(x,y),fl_b.wet) then
 		iset(x,y,0)
 		return
@@ -245,7 +282,7 @@ function set_fire(x,y,always)
 		sset(mm_x,mm_y,8)
 		iset(x,y,15)
 	end
-	if(fget(m_spr,fl_b.block)) return
+	if(fget(m_spr,fl_b.last)) return
 	mset(x,y,mget(x,y)+1)
 end
 
@@ -257,8 +294,6 @@ function on_fire(x,y)
 end
 
 function update_fire(x,y)
-	if(on_fire(x,y)) return
-
 	local prob=0
 	for d_x=-1,1 do
 		for d_y=-1,1 do
@@ -272,6 +307,10 @@ function update_fire(x,y)
 	end
 	if rnd(1)<prob then
 		set_fire(x,y)
+	else
+		if on_fire(x,y) and rnd(1)<0.1 then
+			clr_fire(x,y,0)
+		end
 	end
 end
 
@@ -298,18 +337,43 @@ function thunderstrike()
 	return thunder_tick>tick
 end
 
+function update_rescue()
+	if(tick<rescue_tick) return
+	
+	local fire=false
+	for x=29,34 do
+		for y=29,34 do
+			fire=fire or fget(iget(x,y),fl_b.fire)
+		end
+	end
+	
+	if fire then
+		set_banner("fire hazard - rescue turned away")
+		rescue_tick+=flr((1+rnd(1))*60*30)
+		local px=play.x/8
+		local py=play.y/8
+		iset(px+rnd(5)-2,py+rnd(5)-2,item.bucket)
+		rescue=false
+	else
+		rescue=true
+	end
+end
+	
 function update_world()
+	if(tick%30==0) game_time+=1
+
 	update_player()
 
 	world_x=mid(0,play.x-28,448)
 	world_y=mid(0,play.y-20,464)
 
-	update_thunder(0.01)
+	update_thunder(0.005)
 	for x=0,63 do
 		update_fire(x,tick%64)
 	end
 
 	animate_fire()
+	update_rescue()
 end
 
 function draw_map()
@@ -362,19 +426,22 @@ function draw_ui()
 			spr(item.bucket,n*7-6,7)
 		end
 	end
+end
+
+function draw_timer(s,x,col)
+	local m=flr(s/60)
+	local s=s%60
+	local tstr
+
+	if s<10 then
+		tstr=m..":0"..s
+	else
+		tstr=m..":"..s
+	end
 
 	clip()
 	camera()
-	local ts=flr(tick/30)
-	local tm=flr(ts/60)
-	local tstr
-	ts=ts%60
-	if ts<10 then
-		tstr=tm..":0"..ts
-	else
-		tstr=tm..":"..ts
-	end
-	print(tstr,64-4*#tstr,1,8)
+	print(tstr,x-4*#tstr,1,col)
 end
 
 function draw_world()
@@ -387,6 +454,10 @@ function draw_world()
 	draw_minimap()
 	draw_ui()
 	draw_banner()
+
+	local rts=flr(max(rescue_tick-tick,0)/30)
+
+	draw_timer(rts,64,8)
 end
 
 world_state={
@@ -434,11 +505,6 @@ function init_world()
 		end
 	end
 
-	for n=1,5 do
-		iset(8+rnd(48),8+rnd(48),item.bucket)
-	end
-	iset(33,33,item.bucket)
-
 	set_fire(31,31,true)
 	set_fire(31,30,true)
 	set_fire(30,31,true)
@@ -472,14 +538,14 @@ function _draw()
 end
 
 __gfx__
-000000003333333344444444555555550000000000000000000000000000000000000000000000000000000000000000c0c0c0c0dd11dd11ddccddcc98999999
-0000000033b33b3344a44a445545545500000000000000000000000000000000000000000000000000000000000000000c0c0c0c11dd11ddccddccdd88a99a89
-0050050033b33b3b44a44a4a554554540000000000000000000000000000000000000000000000000000000000000000c0c0c0c011111111cccccccc8989899a
-000550003333333b4444444a5555555400000000000000000000000000000000000000000000000000000000000000000c0c0c0c11111111cccccccc9aa9899a
-00055000333b3333444a4444555455550000000000000000000000000000000000000000000000000000000000000000c0c0c0c01dd11dd1cddccddc9a998a89
-00500500333b33b3444a44a45554554500000000000000000000000000000000000000000000000000000000000000000c0c0c0cd11dd11ddccddccd88989a89
-000000003b3333b34a4444a4545555450000000000000000000000000000000000000000000000000000000000000000c0c0c0c011111111cccccccc99a89a9a
-000000003b3333334a4444445455555500000000000000000000000000000000000000000000000000000000000000000c0c0c0c11111111cccccccca9a8a999
+000000003333333344444444555555555555555500000000000000000000000000000000000000000000000000000000c0c0c0c0dd11dd11ddccddcc98999999
+0000000033b33b3344a44a445545545555655655000000000000000000000000000000000000000000000000000000000c0c0c0c11dd11ddccddccdd88a99a89
+0050050033b33b3b44a44a4a554554545555555600000000000000000000000000000000000000000000000000000000c0c0c0c011111111cccccccc8989899a
+000550003333333b4444444a5555555455555555000000000000000000000000000000000000000000000000000000000c0c0c0c11111111cccccccc9aa9899a
+00055000333b3333444a4444555455555556555500000000000000000000000000000000000000000000000000000000c0c0c0c01dd11dd1cddccddc9a998a89
+00500500333b33b3444a44a45554554555555565000000000000000000000000000000000000000000000000000000000c0c0c0cd11dd11ddccddccd88989a89
+000000003b3333b34a4444a4545555455655555500000000000000000000000000000000000000000000000000000000c0c0c0c011111111cccccccc99a89a9a
+000000003b3333334a4444445455555555555555000000000000000000000000000000000000000000000000000000000c0c0c0c11111111cccccccca9a8a999
 000f0000000000000000f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000020000f0000f00002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00002200020000200022000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -730,7 +796,7 @@ aa88aaaaaa888888aa88aaaaaa888888aa88aaaaaa888888aa88aaaaaa888888cccccccccccccccc
 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999988888888888888888888888888888800
 
 __gff__
-000001030000000000000000081a1a0100000000000000000000000000000000000000000000000000000000000002020000000000000000000000000000020204040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000001818100000000000000081a1801000000000000000000000000000000000000000000000000000000000000c0c00000000000000000000000000000c0c004040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
