@@ -174,11 +174,38 @@ play={
 	hd_x=1,
 	hd_y=0,
 	ht=max_ht,
+	en=max_ht,
 	bkt=0,
 	n_bkt=0
 	}
 
-function move_player()
+function hurt_player(dmg)
+	play.ht=max(0,play.ht-dmg)
+	play.en=min(play.en,play.ht)
+	if play.ht==0 then
+		next_state=gameover_state
+	end
+end
+
+function tire_player(pow)
+	local en=play.en-max(pow-1,0)
+	play.en=max(0,en)
+	if en<0 then
+		hurt_player(en/-20)
+	end
+end
+
+function heal_player(rate)
+	local ht=(1+play.ht)*(1+rate)
+	play.ht=min(ht,max_ht)
+end
+
+function rest_player(rate)
+	local en=(1+play.en)*(1+rate)
+	play.en=min(en,play.ht)
+end
+
+function move_player(spd)
 	local mov_x=0
 	local mov_y=0
 
@@ -189,30 +216,32 @@ function move_player()
 	if mov_x~=0 or mov_y~=0 then
 		play.hd_x=mov_x
 		play.hd_y=mov_y
+		tire_player(spd)
+		if(play.en<max_ht/4) spd/=2
+	else
+		rest_player(0.01)
 	end
-	play.dx=mov_x
-	play.dy=mov_y
-	play.x=mid(0,play.x+mov_x,504)
-	play.y=mid(0,play.y+mov_y,504)
+	play.dx=mov_x*spd
+	play.dy=mov_y*spd
+	play.x=mid(0,play.x+play.dx,504)
+	play.y=mid(0,play.y+play.dy,504)
 end
 
 function collide_player()
 	local mflags=0
 	local iflags=0
-	
+
 	for d_x=0,7,7 do
 		local map_x=(play.x+d_x)/8
 		for d_y=0,7,7 do
 			local map_y=(play.y+d_y)/8
-			local	iflag=fget(iget(map_x,map_y))
-			local	mflag=fget(mget(map_x,map_y))
+			local iflag=fget(iget(map_x,map_y))
+			local mflag=fget(mget(map_x,map_y))
 			iflags=bor(iflags,iflag)
 			mflags=bor(mflags,mflag)
 
 			if fl_tst(fl_m.fire,iflag) then
-				play.ht-=1
-			else
-				play.ht=min(play.ht*1.0001,max_ht)
+				hurt_player(1)
 			end
 
 			if fl_tst(fl_m.item,iflag) then
@@ -226,10 +255,10 @@ function collide_player()
 	end
 
 	local aflags=bor(mflags,iflags)
-	
+
 	if fl_tst(fl_m.water,mflags) then
 		play.bkt=min(play.n_bkt,play.bkt+1)
-		play.ht=min(play.ht*1.01,max_ht)
+		heal_player(0.001)
 	end
 
 	if fl_tst(fl_m.block,aflags) then
@@ -238,13 +267,15 @@ function collide_player()
 	end
 end
 
-function use_bucket()
+function use_bucket(pow)
 	if(play.bkt<1) return
+	tire_player(pow*20)
+	if(play.en<=25) pow/=2
 
-	for x=-1,1 do
-		local mx=(play.x+4*x)/8+play.hd_x
-		for y=-1,1 do
-			local my=(play.y+4*y)/8+play.hd_y
+	for x=-1,8,3 do
+		local mx=(play.x+x)/8+play.hd_x*(pow+1)
+		for y=-1,8,3 do
+			local my=(play.y+y)/8+play.hd_y*(pow+1)
 			if iget(mx,my)==0 then
 				iset(mx,my,12)
 			end
@@ -257,12 +288,11 @@ function use_bucket()
 end
 
 function update_player()
-	move_player()
+	local pow=1
+	if(btn(5)) pow*=2
+	move_player(pow)
 	collide_player()
-	if(btnp(4)) use_bucket()
-	if play.ht<=0 then
-		next_state=gameover_state
-	end
+	if(btnp(4)) use_bucket(pow)
 end
 
 function clr_fire(x,y,sp)
@@ -416,10 +446,10 @@ function draw_ui()
 	rectfill(0,0,64,16,9)
 
 	ht_px=flr(46*play.ht/max_ht)
-	rectfill(1,1,46,5,11)
-	if ht_px<46 then
-		rectfill(ht_px,1,46,5,8)
-	end
+	en_px=flr(46*play.en/max_ht)
+	rectfill(1,1,46,5,8)
+	if(ht_px>0)rectfill(1,1,ht_px,5,10)
+	if(en_px>0)rectfill(1,1,en_px,5,11)
 	print("health",12,1,0)
 
 	if play.n_bkt>0 then
