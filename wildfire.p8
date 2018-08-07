@@ -490,6 +490,7 @@ function draw_world()
 	local rts=flr(max(rescue_tick-tick,0)/30)
 
 	draw_timer(rts,64,8)
+	draw_timer(game_time,21,0)
 end
 
 world_state={
