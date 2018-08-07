@@ -4,12 +4,13 @@ __lua__
 -- wildfire
 -- by notcalle  #lowrezjam 2018
 
-tick=0
-thunder_tick=tick
-rescue_tick=tick
-max_ht=100.0
-game_state={}
-game_time=0
+init_state={
+	init=function()
+		poke(0x5f2c,3) -- 64x64 mode
+		cls()
+		game.next(menu_state)
+	end
+}
 
 -- sprite flag definitions
 fl_b={
@@ -58,87 +59,94 @@ end
 -- game menu screen
 --
 
-function update_menu()
-	if btnp(4) or btnp(5) then
-		next_state=world_state
-	end
-end
-
-function draw_menu()
-	if(tick%2~=0) return
-	cls(9)
-	draw_firetext("wildfire")
-	cprint("❎/🅾️ to start",52,8,2)
-end
-
 menu_state={
-	draw=draw_menu,
-	update=update_menu
-	}
+	update=function(my)
+		if button.po or button.px then
+			game.next(world_state)
+		end
+	end,
+
+	draw=function(my)
+		if(not game.nth_tick(2)) return
+		cls(9)
+		draw_firetext("wildfire")
+		cprint("❎/🅾️ to start",52,8,2)
+	end
+}
 
 --
 -- game over screen
 --
 
-function update_gameover()
-	if btnp(4) or btnp(5) then
-		extcmd("reset")
-	end
-end
-
-function draw_gameover()
-	draw_firetext("game over")
-end
-
 gameover_state={
-	draw=draw_gameover,
-	update=update_gameover
-	}
+	draw=function()
+		draw_firetext("game over")
+	end
+}
 
-function draw_rescue()
-	draw_firetext("rescued")
-end
+--
+-- rescued screen
+--
 
-rescue_state={
-	draw=draw_rescue,
-	update=update_gameover
-	}
+rescued_state={
+	draw=function()
+		draw_firetext("rescued")
+	end
+}
+
 --
 -- running game
 --
 
 banner={
-	tick=0,
-	str=nil,
-	}
+	init=function(my,str)
+		my.tick=0
+		my.str=str
+		my.x=0
+	end,
 
-function draw_banner()
-	if(banner.tick<=tick) return
+	update=function(my)
+		my.x+=1
+	end,
 
-	local str=banner.str
+	draw=function(my)
+		if(my.tick<=game.tick) return
 
-	clip(0,39,64,46)
-	camera(banner.x,-40)
-	print(str,rnd(3),rnd(3),10)
-	print(str,rnd(3),rnd(3),9)
-	print(str,rnd(3),rnd(3),10)
-	print(str,rnd(3),rnd(3),9)
-	print(str,1,1,0)
-	banner.x+=1
-end
+		local str=my.str
 
-function set_banner(str)
-	banner.x=-64
-	banner.str=str
-	banner.tick=tick+64+4*#str
-end
+		clip(0,39,64,46)
+		camera(my.x,-40)
+		print(str,rnd(3),rnd(3),10)
+		print(str,rnd(3),rnd(3),9)
+		print(str,rnd(3),rnd(3),10)
+		print(str,rnd(3),rnd(3),9)
+		print(str,1,1,0)
+	end,
+
+	new=function(str)
+		my=banner -- fixme
+		my.x=-64
+		my.str=str
+		my.tick=game.tick+64+4*#str
+	end,
+}
 
 -- items
 
 item={
 	bucket=64,
-	bucket_full=65
-	}
+	bucket_full=65,
+
+	take=function(play,x,y)
+		local ispr=iget(x,y)
+		if ispr==item.bucket or ispr==item.bucket_full then
+			play.n_bkt+=1
+			if(ispr==item.bucket_full) play.bkt+=1
+			banner.new("bucket taken",0)
+		end
+		iset(x,y,0)
+	end,
+}
 
 function iset(x,y,item)
 	mset(64+x,y,item)
@@ -148,419 +156,524 @@ function iget(x,y)
 	return mget(64+x,y)
 end
 
-function take_item(x,y)
-	local ispr=iget(x,y)
-	if ispr==item.bucket or ispr==item.bucket_full then
-		play.n_bkt+=1
-		if(ispr==item.bucket_full) play.bkt+=1
-		set_banner("bucket taken",0)
-	end
-	iset(x,y,0)
-end
-
-function mmset(x,y,c)
-	local mm_x=112+x/4
-	local mm_y=48+y/4
-	sset(mm_x,mm_y,c)
-end
-
 -- player data
 
-play={
-	x=256,
-	y=256,
-	dx=0,
-	dy=0,
-	hd_x=1,
-	hd_y=0,
-	ht=max_ht,
-	en=max_ht,
-	bkt=0,
-	n_bkt=0
-	}
+player={
+	max_ht=100.0,
 
-function hurt_player(dmg)
-	play.ht=max(0,play.ht-dmg)
-	play.en=min(play.en,play.ht)
-	if play.ht==0 then
-		next_state=gameover_state
-	end
-end
+	init=function(my)
+		my.x=256
+		my.y=256
+		my.dx=0
+		my.dy=0
+		my.hd_x=1
+		my.hd_y=0
+		my.ht=my.max_ht
+		my.en=my.max_ht
+		my.bkt=0
+		my.n_bkt=0
+	end,
 
-function tire_player(pow)
-	local en=play.en-max(pow-1,0)
-	play.en=max(0,en)
-	if en<0 then
-		hurt_player(en/-20)
-	end
-end
-
-function heal_player(rate)
-	local ht=(1+play.ht)*(1+rate)
-	play.ht=min(ht,max_ht)
-end
-
-function rest_player(rate)
-	local en=(1+play.en)*(1+rate)
-	play.en=min(en,play.ht)
-end
-
-function move_player(spd)
-	local mov_x=0
-	local mov_y=0
-
-	if(btn(0)) mov_x-=1
-	if(btn(1)) mov_x+=1
-	if(btn(2)) mov_y-=1
-	if(btn(3)) mov_y+=1
-	if mov_x~=0 or mov_y~=0 then
-		play.hd_x=mov_x
-		play.hd_y=mov_y
-		tire_player(spd)
-		if(play.en<max_ht/4) spd/=2
-	else
-		rest_player(0.01)
-	end
-	play.dx=mov_x*spd
-	play.dy=mov_y*spd
-	play.x=mid(0,play.x+play.dx,504)
-	play.y=mid(0,play.y+play.dy,504)
-end
-
-function collide_player()
-	local mflags=0
-	local iflags=0
-
-	for d_x=0,7,7 do
-		local map_x=(play.x+d_x)/8
-		for d_y=0,7,7 do
-			local map_y=(play.y+d_y)/8
-			local iflag=fget(iget(map_x,map_y))
-			local mflag=fget(mget(map_x,map_y))
-			iflags=bor(iflags,iflag)
-			mflags=bor(mflags,mflag)
-
-			if fl_tst(fl_m.fire,iflag) then
-				hurt_player(1)
-			end
-
-			if fl_tst(fl_m.item,iflag) then
-				take_item(map_x,map_y)
-			end
-
-			if fl_tst(fl_m.rescue,mflag) and rescue then
-				next_state=rescue_state
-			end
+	hurt=function(my,dmg)
+		my.ht=max(0,my.ht-dmg)
+		my.en=min(my.en,my.ht)
+		if my.ht==0 then
+			game.next(gameover_state)
 		end
-	end
+	end,
 
-	local aflags=bor(mflags,iflags)
+	tire=function(my,pow)
+		local en=my.en-max(pow-1,0)
+		my.en=max(0,en)
+		if en<0 then
+			my.hurt(my,en/-20)
+		end
+	end,
 
-	if fl_tst(fl_m.water,mflags) then
-		play.bkt=min(play.n_bkt,play.bkt+1)
-		heal_player(0.001)
-	end
+	heal=function(my,rate)
+		local ht=(1+my.ht)*(1+rate)
+		my.ht=min(ht,my.max_ht)
+	end,
 
-	if fl_tst(fl_m.block,aflags) then
-		play.x-=play.dx
-		play.y-=play.dy
-	end
-end
+	rest=function(my,rate)
+		local en=(1+my.en)*(1+rate)
+		my.en=min(en,my.ht)
+	end,
 
-function use_bucket(pow)
-	if(play.bkt<1) return
-	tire_player(pow*20)
-	if(play.en<=25) pow/=2
+	move=function(my,spd)
+		local mov_x=0
+		local mov_y=0
 
-	for x=-1,8,3 do
-		local mx=(play.x+x)/8+play.hd_x*(pow+1)
-		for y=-1,8,3 do
-			local my=(play.y+y)/8+play.hd_y*(pow+1)
-			if iget(mx,my)==0 then
-				iset(mx,my,12)
-			end
-			if fget(iget(mx,my),fl_b.fire) then
-				clr_fire(mx,my,12)
+		if(button.l) mov_x-=1
+		if(button.r) mov_x+=1
+		if(button.u) mov_y-=1
+		if(button.d) mov_y+=1
+
+		if mov_x~=0 or mov_y~=0 then
+			my.hd_x=mov_x
+			my.hd_y=mov_y
+			my.tire(my,spd)
+			if(my.en<my.max_ht/4) spd/=2
+		else
+			my.rest(my,0.01)
+		end
+
+		local dx=mov_x*spd
+		local dy=mov_y*spd
+
+		my.x=mid(0,my.x+dx,504)
+		my.y=mid(0,my.y+dy,504)
+		my.collide(my,dx,dy)
+	end,
+
+	collide=function(my,dx,dy)
+		local mflags=0
+		local iflags=0
+
+		for d_x=0,7,7 do
+			local map_x=(my.x+d_x)/8
+			for d_y=0,7,7 do
+				local map_y=(my.y+d_y)/8
+				local iflag=fget(iget(map_x,map_y))
+				local mflag=fget(mget(map_x,map_y))
+				iflags=bor(iflags,iflag)
+				mflags=bor(mflags,mflag)
+
+				if fl_tst(fl_m.fire,iflag) then
+					my.hurt(my,1)
+				end
+
+				if fl_tst(fl_m.item,iflag) then
+					item.take(my,map_x,map_y)
+				end
+
+				if fl_tst(fl_m.rescue,mflag) and rescue.can_land then
+					game.next(rescue_state)
+				end
 			end
 		end
-	end
-	play.bkt-=1
-end
 
-function update_player()
-	local pow=1
-	if(btn(5)) pow*=2
-	move_player(pow)
-	collide_player()
-	if(btnp(4)) use_bucket(pow)
-end
+		local aflags=bor(mflags,iflags)
 
-function clr_fire(x,y,sp)
-	if(not on_fire(x,y)) return
+		if fl_tst(fl_m.water,mflags) then
+			my.bkt=min(my.n_bkt,my.bkt+1)
+			my.heal(my,0.001)
+		end
 
-	mmset(x,y,0)
-	iset(x,y,sp)
-	if rnd(1)<0.1 then
-		mset(x,y,4)
-	end
-end
+		if fl_tst(fl_m.block,aflags) then
+			my.x-=dx
+			my.y-=dy
+		end
+	end,
 
-function set_fire(x,y,always)
-	local m_spr=mget(x,y)
-	if(fget(m_spr,fl_b.water)) return
-	if fget(iget(x,y),fl_b.wet) then
-		iset(x,y,0)
-		return
-	end
-	if fget(m_spr,fl_b.fire) or always then
-		mmset(x,y,8)
-		iset(x,y,15)
-	end
-	if(fget(m_spr,fl_b.last)) return
-	mset(x,y,mget(x,y)+1)
-end
+	update=function(my)
+		local pow=1
+		if(button.x) pow*=2
+		my.move(my,pow)
+		if(button.po) my.use_bucket(my,pow)
+	end,
 
-function on_fire(x,y)
-	if x<0 or y<0 or x>63 or y>64 then
-		return false
-	end
-	return fget(iget(x,y),fl_b.fire)
-end
+	draw=function(my)
+		local pspr=33+my.hd_x+16*my.hd_y
 
-function update_fire(x,y)
-	local prob=0
-	for d_x=-1,1 do
-		for d_y=-1,1 do
-			local ispr=iget(x+d_x,y+d_y)
-			if fget(ispr,fl_b.fire) then
-				prob+=0.11
-			elseif fget(ispr,fl_b.wet) then
-				prob-=0.1
+		clip(0,0,64,48)
+		camera(world.x,world.y)
+		spr(pspr,my.x,my.y)
+	end,
+
+	use_bucket=function(my,pow)
+		if(my.bkt<1) return
+		my.tire(my,pow*20)
+		if(my.en<=25) pow/=2
+
+		for x=-1,8,3 do
+			local mx=(my.x+x)/8+my.hd_x*(pow+1)
+			for y=-1,8,3 do
+				local my=(my.y+y)/8+my.hd_y*(pow+1)
+				if iget(mx,my)==0 then
+					iset(mx,my,12)
+				end
+				if fget(iget(mx,my),fl_b.fire) then
+					fire.clr(mx,my,12)
+					sfx(1)
+				end
 			end
 		end
-	end
-	if rnd(1)<prob then
-		set_fire(x,y)
-	elseif rnd(0.11)>prob then
-		clr_fire(x,y)
-	end
-end
+		my.bkt-=1
+	end,
+}
 
-function animate_fire()
-	local x=flr(rnd(8))
-	local y=flr(rnd(8))
-	local c=(flr(rnd(4))+8)%11
-	sset(x+120,y,c)
-end
+fire={
+	init=function()
+		fire.set(31,31,true)
+		fire.set(31,30,true)
+		fire.set(30,31,true)
+		fire.set(30,30,true)
+	end,
 
-function update_thunder(prob)
-	if rnd(1) < prob then
-		local thun_x=flr(rnd(64))
-		local thun_y=flr(rnd(64))
+	clr=function(x,y,sp)
+		if(not fire.at(x,y)) return
 
-		set_fire(thun_x,thun_y,true)
+		minimap.set(x,y,0)
+		iset(x,y,sp)
+		if rnd(1)<0.1 then
+			mset(x,y,4)
+		end
+	end,
 
-		thunder_tick=tick+flr(4+rnd(4))
-		sfx(0)
-	end
-end
+	set=function(x,y,always)
+		local m_spr=mget(x,y)
+		if(fget(m_spr,fl_b.water)) return
+		if fget(iget(x,y),fl_b.wet) then
+			iset(x,y,0)
+			return
+		end
+		if fget(m_spr,fl_b.fire) or always then
+			minimap.set(x,y,8)
+			iset(x,y,15)
+		end
+		if(fget(m_spr,fl_b.last)) return
+		mset(x,y,mget(x,y)+1)
+	end,
 
-function thunderstrike()
-	return thunder_tick>tick
-end
+	at=function(x,y)
+		if x<0 or y<0 or x>63 or y>64 then
+			return false
+		end
+		return fget(iget(x,y),fl_b.fire)
+	end,
 
-function update_rescue()
-	if(tick<rescue_tick) return
+	animate=function()
+		local x=flr(rnd(8))
+		local y=flr(rnd(8))
+		local c=(flr(rnd(4))+8)%11
+		sset(x+120,y,c)
+	end,
 
-	local fire=false
-	for x=29,34 do
-		for y=29,34 do
-			fire=fire or fget(iget(x,y),fl_b.fire)
+	update_at=function(x,y)
+		local prob=0
+		for d_x=-1,1 do
+			for d_y=-1,1 do
+				local ispr=iget(x+d_x,y+d_y)
+				if fget(ispr,fl_b.fire) then
+					prob+=0.11
+				elseif fget(ispr,fl_b.wet) then
+					prob-=0.1
+				end
+			end
+		end
+		if rnd(1)<prob then
+			fire.set(x,y)
+		elseif rnd(0.11)>prob then
+			fire.clr(x,y)
+		end
+	end,
+
+	update=function()
+		for x=0,63 do
+			fire.update_at(x,game.tick%64)
 		end
 	end
+}
 
-	if fire then
-		set_banner("fire hazard - rescue turned away")
-		rescue_tick+=flr((1+rnd(1))*60*30)
-		local px=play.x/8
-		local py=play.y/8
-		iset(px+rnd(5)-2,py+rnd(5)-2,item.bucket)
-		rescue=false
-	else
-		rescue=true
-	end
-end
+thunder={
+	init=function()
+		thunder.tick=0
+		thunder.prob=0.005
+	end,
 
-function update_world()
-	if(tick%30==0) game_time+=1
+	update=function()
+		if rnd(1) < thunder.prob then
+			local thun_x=flr(rnd(64))
+			local thun_y=flr(rnd(64))
 
-	update_player()
+			fire.set(thun_x,thun_y,true)
 
-	world_x=mid(0,play.x-28,448)
-	world_y=mid(0,play.y-20,464)
-
-	update_thunder(0.005)
-	for x=0,63 do
-		update_fire(x,tick%64)
-	end
-
-	animate_fire()
-	update_rescue()
-end
-
-function draw_map()
-	local cam_x=world_x%8
-	local cam_y=world_y%8
-	local map_x=flr(world_x/8)
-	local map_y=flr(world_y/8)
-
-	clip(0,0,64,48)
-	camera(cam_x,cam_y)
-	map(map_x,map_y,0,0,9,7)
-	map(map_x+64,map_y,0,0,9,7)
-end
-
-function draw_minimap()
-	clip(48,48,16,16)
-	camera(-48,-48)
-	rectfill(0,0,16,16,0)
-	spr(110,0,0,2,2)
-	if tick%2 == 1 then
-		pset(play.x/32,play.y/32,15)
-	end
-end
-
-function draw_player()
-	local pspr=33+play.hd_x+16*play.hd_y
-
-	clip(0,0,64,48)
-	camera(world_x,world_y)
-	spr(pspr,play.x,play.y)
-end
-
-function draw_ui()
-	camera(0,-48)
-	clip(0,48,48,16)
-	rectfill(0,0,64,16,9)
-
-	ht_px=flr(46*play.ht/max_ht)
-	en_px=flr(46*play.en/max_ht)
-	rectfill(1,1,46,5,8)
-	if(ht_px>0)rectfill(1,1,ht_px,5,10)
-	if(en_px>0)rectfill(1,1,en_px,5,11)
-	print("health",12,1,0)
-
-	if play.n_bkt>0 then
-		for n=1,play.bkt do
-			spr(item.bucket_full,n*7-6,7)
+			thunder.tick=game.tick+flr(4+rnd(4))
+			sfx(0)
 		end
-		for n=play.bkt+1,play.n_bkt do
-			spr(item.bucket,n*7-6,7)
+	end,
+
+	strike=function()
+		return thunder.tick>game.tick
+	end
+}
+
+rescue={
+	init=function()
+		rescue.can_land=false
+		rescue.tick=0
+	end,
+
+	update=function()
+		if(game.tick<rescue.tick) return
+
+		local on_fire=false
+		for x=29,34 do
+			for y=29,34 do
+				on_fire=on_fire or fire.at(x,y)
+			end
 		end
+
+		if fire then
+			banner.new("fire hazard - rescue turned away")
+			rescue.tick+=flr((1+rnd(1))*60*30)
+			local px=player.x/8
+			local py=player.y/8
+			iset(px+rnd(5)-2,py+rnd(5)-2,item.bucket)
+			rescue.can_land=false
+		else
+			if rescue.can_land==false then
+				banner.new("helipad clear - rescue landed")
+			end
+			rescue.can_land=true
+		end
+	end,
+
+	draw=function()
+		local secs=flr(max(rescue.tick-game.tick,0)/30)
+
+		timer.draw(secs,64,8)
 	end
-end
+}
 
-function draw_timer(s,x,col)
-	local m=flr(s/60)
-	local s=s%60
-	local tstr
+minimap={
+	init=function()
+		for x=0,15 do
+			for y=0,15 do
+				minimap.clr(x,y)
+			end
+		end
+	end,
 
-	if s<10 then
-		tstr=m..":0"..s
-	else
-		tstr=m..":"..s
+	draw=function()
+		clip(48,48,16,16)
+		camera(-48,-48)
+		rectfill(0,0,16,16,0)
+		spr(110,0,0,2,2)
+		if game.tick%2 == 1 then
+			pset(player.x/32,player.y/32,15)
+		end
+	end,
+
+	clr=function(x,y)
+		minimap.set(x,y,0)
+	end,
+
+	set=function(x,y,c)
+		local mm_x=112+x/4
+		local mm_y=48+y/4
+		sset(mm_x,mm_y,c)
 	end
+}
 
-	clip()
-	camera()
-	print(tstr,x-4*#tstr,1,col)
-end
+timer={
+	draw=function(secs,x,c)
+		local m=flr(secs/60)
+		local s=secs%60
+		local tstr
 
-function draw_world()
-	cls(6+flr(rnd(2)))
-	if not thunderstrike() then
-		draw_map()
+		if s<10 then
+			tstr=m..":0"..s
+		else
+			tstr=m..":"..s
+		end
+
+		clip()
+		camera()
+		print(tstr,x-4*#tstr,1,c)
 	end
+}
 
-	draw_player()
-	draw_minimap()
-	draw_ui()
-	draw_banner()
+ui={
+	init=function()
+		init(minimap)
+	end,
 
-	local rts=flr(max(rescue_tick-tick,0)/30)
+	draw=function()
+		camera(0,-48) clip(0,48,48,16)
+		rectfill(0,0,64,16,9)
 
-	draw_timer(rts,64,8)
-	draw_timer(game_time,21,0)
-end
+		ht_px=flr(46*player.ht/player.max_ht)
+		en_px=flr(46*player.en/player.max_ht)
+		rectfill(1,1,46,5,8)
+		if(ht_px>0)rectfill(1,1,ht_px,5,10)
+		if(en_px>0)rectfill(1,1,en_px,5,11)
+		print("health",12,1,0)
+
+		if player.n_bkt>0 then
+			for n=1,player.bkt do
+				spr(item.bucket_full,n*7-6,7)
+			end
+			for n=player.bkt+1,player.n_bkt do
+				spr(item.bucket,n*7-6,7)
+			end
+		end
+		draw(minimap)
+		draw(minimap)
+		timer.draw(game.seconds,21,0)
+	end
+}
+
+water={
+	line=function()
+		local sum=0
+		for n=1,10 do
+			sum+=rnd(1)
+		end
+		return max(1,sum-2)
+	end,
+
+	init=function()
+		for n=0,63 do
+			for c=0,water.line() do
+				water.set(n,c)
+			end
+
+			for c=0,water.line() do
+				water.set(c,n)
+			end
+
+			for c=0,water.line() do
+				water.set(63-n,63-c)
+			end
+
+			for c=0,water.line() do
+				water.set(63-c,63-n)
+			end
+		end
+	end,
+
+	set=function(x,y)
+		mset(x,y,14)
+		minimap.set(x,y,12)
+	end,
+}
+
+world={
+	init=function(my)
+		my.x=256
+		my.y=256
+		init(water)
+		init(fire)
+		init(thunder)
+	end,
+
+	update=function(my)
+		my.x=mid(0,player.x-28,448)
+		my.y=mid(0,player.y-20,464)
+
+		update(thunder)
+		update(fire)
+		fire.animate()
+	end,
+
+	draw=function(my)
+		local cam_x=my.x%8
+		local cam_y=my.y%8
+		local map_x=flr(my.x/8)
+		local map_y=flr(my.y/8)
+
+		clip(0,0,64,48)
+		camera(cam_x,cam_y)
+		map(map_x,map_y,0,0,9,7)
+		map(map_x+64,map_y,0,0,9,7)
+	end
+}
 
 world_state={
 	draw=draw_world,
-	update=update_world
-	}
+	update=update_world,
 
-function waterline()
-	local sum=0
-	for n=1,10 do
-		sum+=rnd(1)
-	end
-	return max(1,sum-2)
-end
+	init=function()
+		init(player)
+		init(rescue)
+		init(world)
+		init(ui)
+	end,
 
-function set_water(x,y)
-	mset(x,y,14)
-	mmset(x,y,12)
-end
+	update=function()
+		update(player)
+		update(rescue)
+		update(world)
+	end,
 
-function init_world()
-	local r1,r2,rt
-	for n=0,63 do
-		for c=0,waterline() do
-			set_water(n,c)
+	draw=function(my)
+		cls(6+flr(rnd(2)))
+		if not thunder.strike() then
+			draw(world)
 		end
 
-		for c=0,waterline() do
-			set_water(c,n)
-		end
-
-		for c=0,waterline() do
-			set_water(63-n,63-c)
-		end
-
-		for c=0,waterline() do
-			set_water(63-c,63-n)
-		end
-	end
-
-	set_fire(31,31,true)
-	set_fire(31,30,true)
-	set_fire(30,31,true)
-	set_fire(30,30,true)
-end
+		draw(rescue)
+		draw(player)
+		draw(ui)
+	end,
+}
 
 --
--- main loop
+-- engine library
+--
+
+function noop() end
+function init(my) if(my) my.init(my) end
+function update(my) if(my) my.update(my) end
+function draw(my) if(my) my.draw(my) end
+
+button={
+	update=function(my)
+		local l,r,u,d,o,x
+		l,r,u,d,o,x=btn(0),btn(1),btn(2),btn(3),btn(4),btn(5)
+		my.l,my.r,my.u,my.d,my.o,my.x=l,r,u,d,o,x
+
+		l,r,u,d,o,x=btnp(0),btnp(1),btnp(2),btnp(3),btnp(4),btnp(5)
+		my.pl,my.pr,my.pu,my.pd,my.po,my.px=l,r,u,d,o,x
+	end
+}
+
+game={
+	state={},
+	tick=0,
+	seconds=0,
+
+	draw=noop,
+	update=noop,
+
+	init=function(state)
+		game.tick=0
+		game.seconds=0
+		game.next(state)
+	end,
+
+	next=function(state)
+		local update=state.update or noop
+		local draw=state.draw or noop
+		game.state,game.update,game.draw=state,update,draw
+		if(state.init) state.init(state)
+	end,
+
+	nth_tick=function(mod)
+		return game.tick%mod==0
+	end
+}
+
+--
+-- standard main loop
 --
 
 function _init()
-	poke(0x5f2c,3) -- 64x64 mode
-	init_world()
-	next_state=menu_state
+	game.init(init_state)
 end
 
 function _update()
-	tick+=1
-	if game_state.update then
-		game_state.update()
-	end
+	update(button)
+	game.update(game.state)
+	game.tick+=1
+	if(game.nth_tick(30)) game.seconds+=1
 end
 
 function _draw()
-	if game_state.draw then
-		camera()
-		clip()
-		game_state.draw()
-	end
-	game_state=next_state
+	camera() clip()
+	game.draw(game.state)
 end
 
 __gfx__
@@ -858,4 +971,12 @@ __map__
 0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 010101010101010101010101010101010101010101010101010101010101012e2f0101010101010101010101010101010101010101010101010101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-00010000256702067025630266700000023650236302361000000236302361000000296701c670000002e65000000000002d6201c620000001e670236702467000000266302662025610000002a6500000000000
+01010000256702067025630266700000023650236302361000000236302361000000296701c670000002e65000000000002d6201c620000001e670236702467000000266302662025610000002a6500000000000
+011000002463424635000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010f00200066500000000000000000000000000000000000306450000000000000000000000000006650000000665000000000000000000000000000000000003064500000000000000000000000000000000000
+010f0020185740000018574000001957400000195740000018574000001b574000001a574000001957400000185740000018574000001957400000195740000018574000001c574000001b574000001957400000
+__music__
+02 04054344
+
