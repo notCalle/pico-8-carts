@@ -158,6 +158,12 @@ function take_item(x,y)
 	iset(x,y,0)
 end
 
+function mmset(x,y,c)
+	local mm_x=112+x/4
+	local mm_y=48+y/4
+	sset(mm_x,mm_y,c)
+end
+
 -- player data
 
 play={
@@ -260,9 +266,9 @@ function update_player()
 end
 
 function clr_fire(x,y,sp)
-	local mm_x=112+x/4
-	local mm_y=48+y/4
-	sset(mm_x,mm_y,0)
+	if(not on_fire(x,y)) return
+
+	mmset(x,y,0)
 	iset(x,y,sp)
 	if rnd(1)<0.1 then
 		mset(x,y,4)
@@ -270,8 +276,6 @@ function clr_fire(x,y,sp)
 end
 
 function set_fire(x,y,always)
-	local mm_x=112+x/4
-	local mm_y=48+y/4
 	local m_spr=mget(x,y)
 	if(fget(m_spr,fl_b.water)) return
 	if fget(iget(x,y),fl_b.wet) then
@@ -279,7 +283,7 @@ function set_fire(x,y,always)
 		return
 	end
 	if fget(m_spr,fl_b.fire) or always then
-		sset(mm_x,mm_y,8)
+		mmset(x,y,8)
 		iset(x,y,15)
 	end
 	if(fget(m_spr,fl_b.last)) return
