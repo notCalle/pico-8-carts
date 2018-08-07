@@ -371,14 +371,14 @@ end
 
 function update_rescue()
 	if(tick<rescue_tick) return
-	
+
 	local fire=false
 	for x=29,34 do
 		for y=29,34 do
 			fire=fire or fget(iget(x,y),fl_b.fire)
 		end
 	end
-	
+
 	if fire then
 		set_banner("fire hazard - rescue turned away")
 		rescue_tick+=flr((1+rnd(1))*60*30)
@@ -390,7 +390,7 @@ function update_rescue()
 		rescue=true
 	end
 end
-	
+
 function update_world()
 	if(tick%30==0) game_time+=1
 
