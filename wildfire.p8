@@ -35,6 +35,25 @@ function fl_tst(mask,flags)
 	return band(mask,flags)~=0
 end
 
+function draw_firetext(str)
+ local x=19-2*#str
+	camera() clip()
+	rectfill(0,28,64,36,8)
+	print("∧ "..str.." ∧",x+rnd(3),29+rnd(3),10)
+	print("∧ "..str.." ∧",x+rnd(3),29+rnd(3),9)
+	print("∧ "..str.." ∧",x+rnd(3),29+rnd(3),10)
+	print("∧ "..str.." ∧",x+rnd(3),29+rnd(3),9)
+	print("∧ "..str.." ∧",x+1,30,8)
+end
+
+function cprint(str,y,c,wide)
+	local w=0
+	if(wide) w=wide
+	local x=32-2*#str-2*w
+
+	print(str,x,y,c)
+end
+
 --
 -- game menu screen
 --
@@ -48,15 +67,8 @@ end
 function draw_menu()
 	if(tick%2~=0) return
 	cls(9)
-	rectfill(0,28,64,36,8)
-	print("∧ wildfire ∧",4+rnd(3),29+rnd(3),10)
-	print("∧ wildfire ∧",4+rnd(3),29+rnd(3),9)
-	print("∧ wildfire ∧",4+rnd(3),29+rnd(3),10)
-	print("∧ wildfire ∧",4+rnd(3),29+rnd(3),9)
-	print("∧ wildfire ∧",5,30,8)
-
-	print("❎/🅾️",22,52,8)
-	print("to start",16,58,8)
+	draw_firetext("wildfire")
+	cprint("❎/🅾️ to start",52,8,2)
 end
 
 menu_state={
@@ -75,13 +87,7 @@ function update_gameover()
 end
 
 function draw_gameover()
-	rectfill(0,28,64,36,8)
-	print("∧ game over ∧",1+rnd(3),29+rnd(3),10)
-	print("∧ game over ∧",1+rnd(3),29+rnd(3),9)
-	print("∧ game over ∧",1+rnd(3),29+rnd(3),10)
-	print("∧ game over ∧",1+rnd(3),29+rnd(3),9)
-	print("∧ game over ∧",2,30,8)
-	draw_timer(game_time,64,0)
+	draw_firetext("game over")
 end
 
 gameover_state={
@@ -90,13 +96,7 @@ gameover_state={
 	}
 
 function draw_rescue()
-	rectfill(0,28,64,36,8)
-	print("∧ rescued ∧",9+rnd(3),29+rnd(3),10)
-	print("∧ rescued ∧",9+rnd(3),29+rnd(3),9)
-	print("∧ rescued ∧",9+rnd(3),29+rnd(3),10)
-	print("∧ rescued ∧",9+rnd(3),29+rnd(3),9)
-	print("∧ rescued ∧",10,30,8)
-	draw_timer(game_time,64,0)
+	draw_firetext("rescued")
 end
 
 rescue_state={
