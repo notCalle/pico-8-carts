@@ -333,25 +333,23 @@ function update_fire(x,y)
 		for d_y=-1,1 do
 			local ispr=iget(x+d_x,y+d_y)
 			if fget(ispr,fl_b.fire) then
-				prob+=0.1
+				prob+=0.11
 			elseif fget(ispr,fl_b.wet) then
-				prob-=0.05
+				prob-=0.1
 			end
 		end
 	end
 	if rnd(1)<prob then
 		set_fire(x,y)
-	else
-		if on_fire(x,y) and rnd(1)<0.1 then
-			clr_fire(x,y,0)
-		end
+	elseif rnd(0.11)>prob then
+		clr_fire(x,y)
 	end
 end
 
 function animate_fire()
 	local x=flr(rnd(8))
 	local y=flr(rnd(8))
-	local c=(flr(rnd(3))+8)%11
+	local c=(flr(rnd(4))+8)%11
 	sset(x+120,y,c)
 end
 
