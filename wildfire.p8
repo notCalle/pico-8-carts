@@ -88,7 +88,7 @@ gameover_state={
 	init=function()
 		music(-1)
 	end,
-	
+
 	draw=function()
 		firetext.draw("game over")
 	end,
@@ -117,31 +117,36 @@ banner={
 		my.tick=0
 		my.str=str
 		my.x=0
+		my.next_state=nil
 	end,
 
 	update=function(my)
+		if my.tick<game.tick then
+			my.str=nil
+			if(my.next_state) game.next(my.next_state)
+			return
+		end
 		my.x+=1
 	end,
 
 	draw=function(my)
-		if(my.tick<=game.tick) return
-
-		local str=my.str
+		if(not my.str) return
 
 		clip(0,39,64,46)
 		camera(my.x,-40)
-		print(str,rnd(3),rnd(3),10)
-		print(str,rnd(3),rnd(3),9)
-		print(str,rnd(3),rnd(3),10)
-		print(str,rnd(3),rnd(3),9)
-		print(str,1,1,0)
+		print(my.str,rnd(3),rnd(3),10)
+		print(my.str,rnd(3),rnd(3),9)
+		print(my.str,rnd(3),rnd(3),10)
+		print(my.str,rnd(3),rnd(3),9)
+		print(my.str,1,1,0)
 	end,
 
-	new=function(str)
+	new=function(str,next_state)
 		my=banner -- fixme
 		my.x=-64
 		my.str=str
 		my.tick=game.tick+64+4*#str
+		my.next_state=next_state
 	end,
 }
 
@@ -156,7 +161,7 @@ item={
 		if ispr==item.bucket or ispr==item.bucket_full then
 			play.n_bkt+=1
 			if(ispr==item.bucket_full) play.bkt+=1
-			banner.new("bucket taken",0)
+			banner.new("bucket taken")
 		end
 		iset(x,y,0)
 	end,
@@ -186,14 +191,13 @@ player={
 		my.en=my.max_ht
 		my.bkt=0
 		my.n_bkt=0
+		my.died=false
 	end,
 
 	hurt=function(my,dmg)
 		my.ht=max(0,my.ht-dmg)
 		my.en=min(my.en,my.ht)
-		if my.ht==0 then
-			game.next(gameover_state)
-		end
+		if(my.ht==0) my.died=true
 	end,
 
 	tire=function(my,pow)
@@ -262,7 +266,7 @@ player={
 				end
 
 				if fl_tst(fl_m.rescue,mflag) and rescue.can_land then
-					game.next(rescue_state)
+					game.next(rescued_state)
 				end
 			end
 		end
@@ -281,10 +285,12 @@ player={
 	end,
 
 	update=function(my)
+		if(my.died) return
 		local pow=1
 		if(button.x) pow*=2
 		my.move(my,pow)
 		if(button.po) my.use_bucket(my,pow)
+		if(my.died) banner.new("you die",gameover_state)
 	end,
 
 	draw=function(my)
@@ -319,10 +325,10 @@ player={
 
 fire={
 	init=function()
-		fire.set(31,31,true)
-		fire.set(31,30,true)
-		fire.set(30,31,true)
-		fire.set(30,30,true)
+		helicopter.update(29,28)
+		for x=0,2 do
+			fire.set(29+x,30,true)
+		end
 	end,
 
 	clr=function(x,y,sp)
@@ -413,14 +419,26 @@ thunder={
 	end
 }
 
+helicopter={
+	update=function(x,y)
+		local base=66+4*flr(game.tick%4/2)
+		for dx=0,3 do
+			for dy=0,3 do
+				iset(x+dx,y+dy,base+dx+dy*16)
+			end
+		end
+	end,
+}
+
 rescue={
-	init=function()
-		rescue.can_land=false
-		rescue.tick=0
+	init=function(my)
+		my.can_land=false
+		my.landed=false
+		my.tick=0
 	end,
 
-	update=function()
-		if(game.tick<rescue.tick) return
+	update=function(my)
+		if(game.tick<my.tick) return
 
 		local on_fire=false
 		for x=29,34 do
@@ -430,26 +448,39 @@ rescue={
 		end
 
 		if on_fire then
-			music(1)
-			banner.new("fire hazard - rescue turned away")
-			rescue.tick+=flr((1+rnd(1))*60*30)
-			local px=player.x/8
-			local py=player.y/8
-			iset(px+rnd(5)-2,py+rnd(5)-2,item.bucket)
-			rescue.can_land=false
+			if my.landed then
+				my.explode(my)
+			else
+				music(1)
+				banner.new("fire hazard - rescue turned away")
+				my.tick+=flr((1+rnd(1))*60*30)
+				local px=player.x/8
+				local py=player.y/8
+				iset(px+rnd(5)-2,py+rnd(5)-2,item.bucket)
+				my.can_land=false
+			end
 		else
-			if rescue.can_land==false then
+			if my.can_land==false then
 				banner.new("helipad clear - rescue landed")
 			end
-			rescue.can_land=true
+			my.can_land=true
 		end
+		if(my.can_land) helicopter.update(31,30)
 	end,
 
-	draw=function()
-		local secs=flr(max(rescue.tick-game.tick,0)/30)
+	explode=function(my)
+		for x=31,33 do
+			for y=31,32 do
+				fire.set(x,y,true)
+			end
+		end
+		banner.new("rescue helicopter exploded",gameover_state)
+	end,
 
+	draw=function(my)
+		local secs=flr(max(my.tick-game.tick,0)/30)
 		timer.draw(secs,64,8)
-	end
+	end,
 }
 
 minimap={
@@ -524,7 +555,6 @@ ui={
 				spr(item.bucket,n*7-6,7)
 			end
 		end
-		draw(minimap)
 		draw(minimap)
 		timer.draw(game.seconds,21,0)
 	end
@@ -605,12 +635,14 @@ world_state={
 		init(rescue)
 		init(world)
 		init(ui)
+		init(banner)
 	end,
 
 	update=function()
 		update(player)
 		update(rescue)
 		update(world)
+		update(banner)
 	end,
 
 	draw=function(my)
@@ -622,6 +654,7 @@ world_state={
 		draw(rescue)
 		draw(player)
 		draw(ui)
+		draw(banner)
 	end,
 }
 
@@ -756,7 +789,7 @@ f00f4000022ff2200004f00f00000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000006600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000006600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000006600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010
+10101010101010101010101010101010101010101010101010101010101010e3f310101010101010101010101010101010101010101010101010101010101010
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
