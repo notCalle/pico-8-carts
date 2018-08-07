@@ -469,43 +469,36 @@ world_state={
 	update=update_world
 	}
 
+function waterline()
+	local sum=0
+	for n=1,10 do
+		sum+=rnd(1)
+	end
+	return max(1,sum-2)
+end
+
+function set_water(x,y)
+	mset(x,y,14)
+	mmset(x,y,12)
+end
+
 function init_world()
 	local r1,r2,rt
 	for n=0,63 do
-		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
-		for c=0,r2 do
-			if c<r1 then
-				mset(n,c,13)
-			else
-				mset(n,c,14)
-			end
+		for c=0,waterline() do
+			set_water(n,c)
 		end
 
-		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
-		for c=0,r2 do
-			if c<r1 then
-				mset(c,n,13)
-			else
-				mset(c,n,14)
-			end
+		for c=0,waterline() do
+			set_water(c,n)
 		end
 
-		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
-		for c=0,r2 do
-			if c<r1 then
-				mset(63-n,63-c,13)
-			else
-				mset(63-n,63-c,14)
-			end
+		for c=0,waterline() do
+			set_water(63-n,63-c)
 		end
 
-		r1=rnd(2) rt=rnd(4) r2=max(r1,rt) r1=min(r1,rt)
-		for c=0,r2 do
-			if c<r1 then
-				mset(63-c,63-n,13)
-			else
-				mset(63-c,63-n,14)
-			end
+		for c=0,waterline() do
+			set_water(63-c,63-n)
 		end
 	end
 
