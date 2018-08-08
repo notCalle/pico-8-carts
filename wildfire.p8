@@ -8,8 +8,35 @@ init_state={
 	init=function()
 		poke(0x5f2c,3) -- 64x64 mode
 		cls()
+		cdata.init("notcalle_wildfire",1)
 		game.next(menu_state)
 	end
+}
+
+--
+-- cartridge data
+--
+cdata={
+	magic_number=0xdeadbeef,
+	magic=0,
+	version=1,
+	last_time=2,
+	best_time=3,
+
+	opt={
+		nightmare=62,
+		music=63,
+	},
+
+	init=function(name,version)
+		cartdata(name)
+		if(dget(cdata.magic)==cdata.magic_number and dget(cdata.version)==version) return
+		dset(cdata.magic,cdata.magic_number)
+		dset(cdata.version,version)
+		for n=2,63 do
+			dset(n,0)
+		end
+	end,
 }
 
 -- sprite flag definitions
