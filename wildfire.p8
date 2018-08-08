@@ -90,20 +90,116 @@ end
 
 menu_state={
 	init=function()
-		music(0)
+		if(opt.bool("music")) music(0)
 	end,
 
 	update=function()
-		if button.po or button.px then
+		if button.po then
+			game.next(options_state)
+		elseif button.px then
 			game.next(world_state)
 		end
 	end,
 
 	draw=function()
 		if(not game.nth_tick(2)) return
-		cls(9)
+		cls(0)
 		firetext.draw("wildfire")
-		cprint("❎/🅾️ to start",52,8,2)
+		cprint("❎ to start",45,8,1)
+		cprint("🅾️ for options",52,8,1)
+	end,
+}
+
+--
+-- game options screen
+--
+
+opt={
+	music={
+		t="bool",
+		tru=0
+	},
+	nightmare={
+		t="bool",
+		tru=1
+	},
+
+	get=function(o)
+		local t=opt[o].t
+		return opt["get_"..t](o)
+	end,
+
+	set=function(o,v)
+		local t=opt[o].t
+		opt["set_"..t](o,v)
+	end,
+
+	str=function(o)
+		local t=opt[o].t
+		return opt["str_"..t](o)
+	end,
+
+	str_bool=function(o)
+		if opt.bool(o) then
+			return "❎"
+		else
+			return "🅾️"
+		end
+	end,
+
+	get_bool=function(o)
+		return dget(cdata.opt[o])%2
+	end,
+
+	set_bool=function(o,v)
+		dset(cdata.opt[o],v%2)
+	end,
+
+	bool=function(o)
+		return opt[o].tru==opt.get(o)
+	end,
+}
+
+options_state={
+	opt={
+		"music",
+		"nightmare",
+	},
+
+	init=function(my)
+		music(-1)
+		my.sel=1
+	end,
+
+	update=function(my)
+		local sel=my.sel+padp.dy
+		local dv=padp.dx
+
+		my.sel=mid(1,sel,#my.opt)
+
+		if dv~=0 then
+			local k=my.opt[my.sel]
+			opt.set(k,opt.get(k)+dv)
+		end
+
+		if(button.po or button.px) game.next(menu_state)
+	end,
+
+	draw=function(my)
+		cls(0)
+
+		for n=1,#my.opt do
+			local k=my.opt[n]
+			local str=opt.str(k)
+
+			clip() camera(-1,6)
+			if n==my.sel then
+				print("⬅️"..str.."➡️ "..k,0,n*7,8)
+			else
+				print("  "..str.."   "..k,0,n*7,5)
+			end
+			n+=1
+		end
 	end,
 }
 
