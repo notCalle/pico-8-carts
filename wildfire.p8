@@ -667,6 +667,30 @@ function init(my) if(my) my.init(my) end
 function update(my) if(my) my.update(my) end
 function draw(my) if(my) my.draw(my) end
 
+pad={
+	update=function(my)
+		my.dx,my.dy=0,0
+		if(button.l) my.dx-=1
+		if(button.r) my.dx+=1
+		if(button.u) my.dy-=1
+		if(button.d) my.dy+=1
+		bo=button.o
+		bx=button.x
+	end,
+}
+
+padp={
+	update=function(my)
+		my.dx,my.dy=0,0
+		if(button.pl) my.dx-=1
+		if(button.pr) my.dx+=1
+		if(button.pu) my.dy-=1
+		if(button.pd) my.dy+=1
+		bo=button.po
+		bx=button.px
+	end,
+}
+
 button={
 	update=function(my)
 		local l,r,u,d,o,x
@@ -675,6 +699,9 @@ button={
 
 		l,r,u,d,o,x=btnp(0),btnp(1),btnp(2),btnp(3),btnp(4),btnp(5)
 		my.pl,my.pr,my.pu,my.pd,my.po,my.px=l,r,u,d,o,x
+
+		update(pad)
+		update(padp)
 	end
 }
 
