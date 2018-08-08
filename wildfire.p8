@@ -282,6 +282,10 @@ item={
 	take=function(play,x,y)
 		local ispr=iget(x,y)
 		if ispr==item.bucket or ispr==item.bucket_full then
+			if opt.bool("nightmare") and play.n_bkt>=2 then
+				banner.new("one bucket per hand")
+				return
+			end
 			play.n_bkt+=1
 			if(ispr==item.bucket_full) play.bkt+=1
 			banner.new("bucket taken")
@@ -332,6 +336,7 @@ player={
 	end,
 
 	heal=function(my,rate)
+		if(opt.bool("nightmare")) return
 		local ht=(1+my.ht)*(1+rate)
 		my.ht=min(ht,my.max_ht)
 	end,
