@@ -802,8 +802,8 @@ pad={
 		if(button.r) my.dx+=1
 		if(button.u) my.dy-=1
 		if(button.d) my.dy+=1
-		bo=button.o
-		bx=button.x
+		my.bo=button.o
+		my.bx=button.x
 	end,
 }
 
@@ -814,8 +814,29 @@ padp={
 		if(button.pr) my.dx+=1
 		if(button.pu) my.dy-=1
 		if(button.pd) my.dy+=1
-		bo=button.po
-		bx=button.px
+		my.bo=button.po
+		my.bx=button.px
+	end,
+}
+
+konami={
+	code={2,2,3,3,0,1,0,1,5,4},
+	init=function(my)
+		my.step=1
+		my.on=false
+	end,
+
+	update=function(my)
+		if(not button.pany) return
+		if(my.step>#my.code) return
+		if btnp(my.code[my.step]) then
+			my.step+=1
+		else
+			my.step=1
+		end
+		if(my.step<=#my.code) return
+		banner.new("⬆️ ⬆️ ⬇️ ⬇️ ⬅️ ➡️ ⬅️ ➡️ ❎ 🅾️          ")
+		my.on=true
 	end,
 }
 
@@ -824,10 +845,11 @@ button={
 		local l,r,u,d,o,x
 		l,r,u,d,o,x=btn(0),btn(1),btn(2),btn(3),btn(4),btn(5)
 		my.l,my.r,my.u,my.d,my.o,my.x=l,r,u,d,o,x
+		my.any=l or r or u or d or o or x
 
 		l,r,u,d,o,x=btnp(0),btnp(1),btnp(2),btnp(3),btnp(4),btnp(5)
 		my.pl,my.pr,my.pu,my.pd,my.po,my.px=l,r,u,d,o,x
-
+		my.pany=l or r or u or d or o or x
 		update(pad)
 		update(padp)
 	end
