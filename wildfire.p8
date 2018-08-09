@@ -19,12 +19,15 @@ init_state={
 cdata={
 	magic_number=0xdeadbeef,
 	magic=0,
-	version=1,
+	version=2,
 	last_time=2,
 	best_time=3,
 
 	opt={
-		nightmare=62,
+		burnout=59,
+		healing=60,
+		max_bkt=61,
+		difficulty=62,
 		music=63,
 	},
 
@@ -36,6 +39,7 @@ cdata={
 		for n=2,63 do
 			dset(n,0)
 		end
+		dset(cdata.opt.max_bkt,opt.max("max_bkt"))
 	end,
 }
 
@@ -90,13 +94,13 @@ end
 
 menu_state={
 	init=function()
-		if(opt.bool("music")) music(0)
+		mus.play(0)
 	end,
 
 	update=function()
-		if button.po then
+		if padp.bo then
 			game.next(options_state)
-		elseif button.px then
+		elseif padp.bx then
 			game.next(world_state)
 		end
 	end,
@@ -116,58 +120,90 @@ menu_state={
 
 opt={
 	music={
-		t="bool",
-		tru=0
+		l={"music","no music"},on=0,
 	},
-	nightmare={
-		t="bool",
-		tru=1
+	difficulty={
+		l={"normal","nightmare","custom"},
+		update=function(v)
+			if v==0 then
+				opt._set("max_bkt",opt.max("max_bkt"))
+				opt._set("healing",opt["healing"].on)
+				opt._set("burnout",opt["burnout"].on)
+			elseif v==1 then
+				opt._set("max_bkt",2)
+				opt._set("healing",1-opt["healing"].on)
+				opt._set("burnout",1-opt["burnout"].on)
+			end
+		end,
+	},
+	max_bkt={
+		min=1,
+		max=5,
+		str=function(v)
+			return tostr(v).." buckets"
+		end,
+		update=function()
+			opt._set("difficulty",opt.max("difficulty"))
+		end,
+	},
+	healing={
+		l={"water heals","no healing"},on=0,
+		update=function()
+			opt._set("difficulty",opt.max("difficulty"))
+		end,
+	},
+	burnout={
+		l={"burns out","burn 4 ever"},on=0,
+		update=function()
+			opt._set("difficulty",opt.max("difficulty"))
+		end,
 	},
 
+	str=function(o)
+		local v=opt.get(o)
+		if(opt[o].str) return opt[o].str(v)
+		return opt[o].l[v+1]
+	end,
+
+	min=function(o)
+		if(opt[o].min) return opt[o].min
+		return 0
+	end,
+
+	max=function(o)
+		if(opt[o].max) return opt[o].max
+		return #opt[o].l-1
+	end,
+
 	get=function(o)
-		local t=opt[o].t
-		return opt["get_"..t](o)
+		return mid(opt.min(o),dget(cdata.opt[o]),opt.max(o))
+	end,
+
+	_set=function(o,v)
+		dset(cdata.opt[o],mid(opt.min(o),v,opt.max(o)))
 	end,
 
 	set=function(o,v)
-		local t=opt[o].t
-		opt["set_"..t](o,v)
+		opt._set(o,v)
+		if(opt[o].update) opt[o].update(v)
 	end,
 
-	str=function(o)
-		local t=opt[o].t
-		return opt["str_"..t](o)
-	end,
-
-	str_bool=function(o)
-		if opt.bool(o) then
-			return "❎"
-		else
-			return "🅾️"
-		end
-	end,
-
-	get_bool=function(o)
-		return dget(cdata.opt[o])%2
-	end,
-
-	set_bool=function(o,v)
-		dset(cdata.opt[o],v%2)
-	end,
-
-	bool=function(o)
-		return opt[o].tru==opt.get(o)
+	on=function(o)
+		return opt[o].on==opt.get(o)
 	end,
 }
 
 options_state={
 	opt={
 		"music",
-		"nightmare",
+		"difficulty",
+		"max_bkt",
+		"healing",
+		"burnout",
 	},
 
 	init=function(my)
-		music(-1)
+		mus.stop()
 		my.sel=1
 	end,
 
@@ -182,7 +218,7 @@ options_state={
 			opt.set(k,opt.get(k)+dv)
 		end
 
-		if(button.po or button.px) game.next(menu_state)
+		if(padp.bo or padp.bx) game.next(menu_state)
 	end,
 
 	draw=function(my)
@@ -191,12 +227,18 @@ options_state={
 		for n=1,#my.opt do
 			local k=my.opt[n]
 			local str=opt.str(k)
+			local v=opt.get(k)
 
 			clip() camera(-1,6)
 			if n==my.sel then
-				print("⬅️"..str.."➡️ "..k,0,n*7,8)
+				local c
+				c=8 if(v==0) c=5
+				print("⬅️",0,n*7,c)
+				c=8 if(v==opt.max(k)) c=5
+				print("➡️",55,n*7,c)
+				cprint(str,n*7,8)
 			else
-				print("  "..str.."   "..k,0,n*7,5)
+				cprint(str,n*7,5)
 			end
 			n+=1
 		end
@@ -209,7 +251,11 @@ options_state={
 
 gameover_state={
 	init=function()
-		music(-1)
+		mus.play(3)
+	end,
+
+	update=function()
+		if(padp.bx or padp.bo) game.next(menu_state)
 	end,
 
 	draw=function()
@@ -223,7 +269,11 @@ gameover_state={
 
 rescued_state={
 	init=function()
-		music(-1)
+		mus.play(4)
+	end,
+
+	update=function()
+		if(padp.bx or padp.bo) game.next(menu_state)
 	end,
 
 	draw=function()
@@ -266,10 +316,22 @@ banner={
 
 	new=function(str,next_state)
 		my=banner -- fixme
+		if(my.str == str) return
 		my.x=-64
 		my.str=str
 		my.tick=game.tick+64+4*#str
 		my.next_state=next_state
+	end,
+}
+
+mus={
+	play=function(pat,delay,mask)
+		if(not opt.on("music")) return
+		music(pat,delay,mask)
+	end,
+
+	stop=function()
+		music(-1)
 	end,
 }
 
@@ -282,8 +344,8 @@ item={
 	take=function(play,x,y)
 		local ispr=iget(x,y)
 		if ispr==item.bucket or ispr==item.bucket_full then
-			if opt.bool("nightmare") and play.n_bkt>=2 then
-				banner.new("one bucket per hand")
+			if play.n_bkt>= opt.get("max_bkt") then
+				banner.new("can't carry more buckets")
 				return
 			end
 			play.n_bkt+=1
@@ -336,7 +398,7 @@ player={
 	end,
 
 	heal=function(my,rate)
-		if(opt.bool("nightmare")) return
+		if(opt.on("healing")) return
 		local ht=(1+my.ht)*(1+rate)
 		my.ht=min(ht,my.max_ht)
 	end,
@@ -347,13 +409,8 @@ player={
 	end,
 
 	move=function(my,spd)
-		local mov_x=0
-		local mov_y=0
-
-		if(button.l) mov_x-=1
-		if(button.r) mov_x+=1
-		if(button.u) mov_y-=1
-		if(button.d) mov_y+=1
+		local mov_x=pad.dx
+		local mov_y=pad.dy
 
 		if mov_x~=0 or mov_y~=0 then
 			my.hd_x=mov_x
@@ -415,9 +472,9 @@ player={
 	update=function(my)
 		if(my.died) return
 		local pow=1
-		if(button.x) pow*=2
+		if(pad.bx) pow*=2
 		my.move(my,pow)
-		if(button.po) my.use_bucket(my,pow)
+		if(padp.bo) my.use_bucket(my,pow)
 		if(my.died) banner.new("you die",gameover_state)
 	end,
 
@@ -447,7 +504,7 @@ player={
 				end
 			end
 		end
-		my.bkt-=1
+		if(not konami.on) my.bkt-=1
 	end,
 }
 
@@ -464,7 +521,7 @@ fire={
 
 		minimap.set(x,y,0)
 		iset(x,y,sp)
-		if rnd(1)<0.1 then
+		if opt.on("burnout") and rnd(1)<0.1 then
 			mset(x,y,4)
 		end
 	end,
@@ -512,7 +569,7 @@ fire={
 		end
 		if rnd(1)<prob then
 			fire.set(x,y)
-		elseif rnd(0.11)>prob then
+		elseif opt.on("burnout") and rnd(0.11)>prob then
 			fire.clr(x,y)
 		end
 	end,
@@ -759,14 +816,17 @@ world_state={
 	update=update_world,
 
 	init=function()
+		init(konami)
 		init(player)
 		init(rescue)
 		init(world)
 		init(ui)
 		init(banner)
+		banner.new("❎ to sprint 🅾️ to throw, rescue on its way once you clear the helipad from fire")
 	end,
 
 	update=function()
+		update(konami)
 		update(player)
 		update(rescue)
 		update(world)
