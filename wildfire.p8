@@ -67,23 +67,32 @@ function fl_tst(mask,flags)
 	return band(mask,flags)~=0
 end
 
-firetext={
-	draw=function(str)
-	 local x=19-2*#str
-		camera() clip()
-		rectfill(0,28,64,36,8)
-		print("∧ "..str.." ∧",x+rnd(3),29+rnd(3),10)
-		print("∧ "..str.." ∧",x+rnd(3),29+rnd(3),9)
-		print("∧ "..str.." ∧",x+rnd(3),29+rnd(3),10)
-		print("∧ "..str.." ∧",x+rnd(3),29+rnd(3),9)
-		print("∧ "..str.." ∧",x+1,30,8)
+ctext={
+	init=function(my,str)
+		my.str=str
+	end,
+
+	draw=function(my,x,y,c)
+		local xo=-2*#my.str
+		print(my.str,x+xo,y,c)
 	end,
 }
 
-function cprint(str,y,c,wide)
-	local w=0
-	if(wide) w=wide
-	local x=32-2*#str-2*w
+firetext={
+	draw=function(str)
+		local txt={}
+		ctext.init(txt,"∧ "..str.." ∧  ")
+		camera() clip()
+		rectfill(0,28,64,36,8)
+		for n=1,4 do
+			ctext.draw(txt,31+rnd(3),29+rnd(3),9+n%2)
+		end
+		ctext.draw(txt,32,30,8)
+	end,
+}
+
+function cprint(str,y,c)
+	local x=32-2*#str
 
 	print(str,x,y,c)
 end
@@ -109,8 +118,8 @@ menu_state={
 		if(not game.nth_tick(2)) return
 		cls(0)
 		firetext.draw("wildfire")
-		cprint("❎ to start",45,8,1)
-		cprint("🅾️ for options",52,8,1)
+		cprint("❎ to start ",45,8)
+		cprint("🅾️ for options ",52,8)
 	end,
 }
 
