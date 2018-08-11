@@ -17,9 +17,9 @@ init_state={
 -- cartridge data
 --
 cdata={
-	magic_number=0xdeadbeef,
+	magic_number=0xdead.beef,
 	magic=0,
-	version=2,
+	version=1,
 	last_time=2,
 	best_time=3,
 
