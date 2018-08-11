@@ -303,7 +303,7 @@ banner={
 	end,
 
 	update=function(my)
-		if my.tick<game.tick then
+		if my.tick<game.tick() then
 			my.str=nil
 			if(my.next_state) game.next(my.next_state)
 			return
@@ -328,7 +328,7 @@ banner={
 		if(my.str == str) return
 		my.x=-64
 		my.str=str
-		my.tick=game.tick+64+4*#str
+		my.tick=game.tick()+64+4*#str
 		my.next_state=next_state
 	end,
 }
@@ -583,7 +583,7 @@ fire={
 
 	update=function()
 		for x=0,63 do
-			fire.update_at(x,game.tick%64)
+			fire.update_at(x,game.tick(64))
 		end
 	end
 }
@@ -601,13 +601,13 @@ thunder={
 
 			fire.set(thun_x,thun_y,true)
 
-			thunder.tick=game.tick+flr(4+rnd(4))
+			thunder.tick=game.tick()+flr(4+rnd(4))
 			sfx(0)
 		end
 	end,
 
 	strike=function()
-		return thunder.tick>game.tick
+		return thunder.tick>game.tick()
 	end,
 }
 
@@ -618,7 +618,7 @@ helicopter={
 	end,
 
 	animate=function(my)
-		local base=66+4*flr(game.tick%4/2)
+		local base=66+4*flr(game.tick(4)/2)
 		for dx=0,3 do
 			for dy=0,3 do
 				iset(my.x+dx,my.y+dy,base+dx+dy*16)
@@ -656,7 +656,7 @@ rescue={
 				helicopter.animate(helicopter)
 			end
 		else
-			if game.tick>my.tick then
+			if game.tick()>my.tick then
 				if on_fire then
 					mus.play(1)
 					banner.new("fire hazard - rescue turned away")
@@ -678,7 +678,7 @@ rescue={
 	end,
 
 	draw=function(my)
-		local secs=flr(max(my.tick-game.tick,0)/30)
+		local secs=flr(max(my.tick-game.tick(),0)/30)
 		timer.draw(secs,64,8)
 	end,
 }
@@ -697,7 +697,7 @@ minimap={
 		camera(-48,-48)
 		rectfill(0,0,16,16,0)
 		spr(110,0,0,2,2)
-		if game.tick%2 == 1 then
+		if game.tick(2) == 1 then
 			pset(player.x/32,player.y/32,15)
 		end
 	end,
@@ -756,7 +756,7 @@ ui={
 			end
 		end
 		draw(minimap)
-		timer.draw(game.seconds,21,0)
+		timer.draw(world_state.time,21,0)
 	end
 }
 
@@ -943,15 +943,11 @@ button={
 
 game={
 	state={},
-	tick=0,
-	seconds=0,
 
 	draw=noop,
 	update=noop,
 
 	init=function(state)
-		game.tick=0
-		game.seconds=0
 		game.next(state)
 	end,
 
@@ -959,12 +955,27 @@ game={
 		local update=state.update or noop
 		local draw=state.draw or noop
 		game.state,game.update,game.draw=state,update,draw
+		state.tick=0
+		state.time=0
 		if(state.init) state.init(state)
 	end,
 
+	tick=function(mod)
+		if mod then
+			return game.state.tick%mod
+		else
+			return game.state.tick
+		end
+	end,
+
 	nth_tick=function(mod)
-		return game.tick%mod==0
-	end
+		return game.tick(mod)==0
+	end,
+
+	update_tick=function(state)
+		state.tick+=1
+		if(state.tick%30==0) state.time+=1
+	end,
 }
 
 --
@@ -978,8 +989,7 @@ end
 function _update()
 	update(button)
 	game.update(game.state)
-	game.tick+=1
-	if(game.nth_tick(30)) game.seconds+=1
+	game.update_tick(game.state)
 end
 
 function _draw()
