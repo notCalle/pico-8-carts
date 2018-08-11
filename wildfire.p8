@@ -316,10 +316,9 @@ banner={
 
 		clip(0,39,64,46)
 		camera(my.x,-40)
-		print(my.str,rnd(3),rnd(3),10)
-		print(my.str,rnd(3),rnd(3),9)
-		print(my.str,rnd(3),rnd(3),10)
-		print(my.str,rnd(3),rnd(3),9)
+		for n=1,4 do
+			print(my.str,rnd(3),rnd(3),9+n%2)
+		end
 		print(my.str,1,1,0)
 	end,
 
