@@ -139,7 +139,7 @@ opt={
 				opt._set("healing",opt["healing"].on)
 				opt._set("burnout",opt["burnout"].on)
 			elseif v==1 then
-				opt._set("max_bkt",2)
+				opt._set("max_bkt",opt.min("max_bkt"))
 				opt._set("healing",1-opt["healing"].on)
 				opt._set("burnout",1-opt["burnout"].on)
 			end
