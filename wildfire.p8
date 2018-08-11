@@ -409,7 +409,7 @@ player={
 	end,
 
 	heal=function(my,rate)
-		if(opt.on("healing")) return
+		if(not opt.on("healing")) return
 		local ht=(1+my.ht)*(1+rate)
 		my.ht=min(ht,my.max_ht)
 	end,
