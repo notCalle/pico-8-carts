@@ -158,7 +158,7 @@ opt={
 	},
 	max_bkt={
 		min=1,
-		max=5,
+		max=6,
 		str=function(v)
 			return tostr(v).." buckets"
 		end,
