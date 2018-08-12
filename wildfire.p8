@@ -115,11 +115,22 @@ menu_state={
 	end,
 
 	draw=function()
+		local last_time=dget(cdata.last_time)
+		local best_time=dget(cdata.best_time)
+
 		if(not game.nth_tick(2)) return
 		cls(0)
+		if last_time>0 then
+			print("last",8,7,8)
+			timer.draw(last_time,26,8)
+		end
+		if best_time>0 then
+			print("best",40,7,8)
+			timer.draw(best_time,58,8)
+		end
 		firetext.draw("wildfire")
-		cprint("❎ to start ",45,8)
-		cprint("🅾️ for options ",52,8)
+		cprint("🅾️ for options ",45,8)
+		cprint("❎ to start ",52,8)
 	end,
 }
 
