@@ -572,7 +572,7 @@ fire={
 				if fget(ispr,fl_b.fire) then
 					prob+=0.11
 				elseif fget(ispr,fl_b.wet) then
-					prob-=0.1
+					prob-=0.05
 				end
 			end
 		end
@@ -639,7 +639,7 @@ rescue={
 	init=function(my)
 		my.can_land=false
 		my.landed=false
-		my.tick=flr((1+rnd(1))*60*30)
+		my.tick=flr((60+rnd(30))*30)
 	end,
 
 	update=function(my)
@@ -662,7 +662,7 @@ rescue={
 				if on_fire then
 					mus.play(1)
 					banner.new("fire hazard - rescue turned away")
-					my.tick+=flr((30+rnd(60))*30)
+					my.tick+=flr((45+rnd(15))*30)
 					if player.n_bkt<opt.get("max_bkt") then
 						local px=player.x/8
 						local py=player.y/8
