@@ -290,9 +290,13 @@ gameover_state={
 rescued_state={
 	init=function()
 		local time=world_state.time
+		local best_time=dget(cdata.best_time)
+
 		mus.play(4)
 		dset(cdata.last_time,time)
-		dset(cdata.best_time,max(time,dget(cdata.best_time)))
+		if best_time==0 or time<best_time then
+			dset(cdata.best_time,time)
+		end
 	end,
 
 	update=function()
