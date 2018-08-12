@@ -844,13 +844,15 @@ world_state={
 	update=update_world,
 
 	init=function()
+		reload(0x0,0x0,0x3000)
+		init(ui)
+		init(banner)
 		init(konami)
 		init(player)
 		init(rescue)
 		init(world)
-		init(ui)
-		init(banner)
 		banner.new("❎ to sprint 🅾️ to throw, rescue on its way once you clear the helipad from fire")
+		mus.play(2)
 	end,
 
 	update=function()
